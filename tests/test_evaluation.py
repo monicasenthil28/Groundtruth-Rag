@@ -107,6 +107,11 @@ def test_compare_deltas_and_dataset_rejection():
     new.per_query_results[0].relevant_chunk_ids = ["B"]
     with pytest.raises(ValueError, match="different golden queries"):
         compare_runs(old, new)
+    new.per_query_results[0].relevant_chunk_ids = ["A"]
+    old.configuration["corpus_fingerprint"] = "one"
+    new.configuration["corpus_fingerprint"] = "two"
+    with pytest.raises(ValueError, match="different corpus fingerprints"):
+        compare_runs(old, new)
 
 
 def test_runner_rejects_bad_inputs():

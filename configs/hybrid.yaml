@@ -1,0 +1,8 @@
+name: hybrid_rrf
+retriever:
+  type: hybrid
+  model: sentence-transformers/all-MiniLM-L6-v2
+  batch_size: 32
+  rrf_k: 60
+  dense_candidates: 20
+  bm25_candidates: 20

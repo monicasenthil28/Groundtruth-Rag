@@ -18,6 +18,8 @@ class MetricDelta:
 def compare_runs(baseline: BenchmarkRun, candidate: BenchmarkRun) -> list[MetricDelta]:
     if baseline.dataset != candidate.dataset:
         raise ValueError("runs use different datasets")
+    if baseline.configuration.get("corpus_fingerprint") != candidate.configuration.get("corpus_fingerprint"):
+        raise ValueError("runs use different corpus fingerprints")
     baseline_queries = {row.query_id: (row.query, row.relevant_chunk_ids) for row in baseline.per_query_results}
     candidate_queries = {row.query_id: (row.query, row.relevant_chunk_ids) for row in candidate.per_query_results}
     if baseline_queries != candidate_queries:

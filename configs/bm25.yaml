@@ -1,0 +1,3 @@
+name: bm25
+retriever:
+  type: bm25
