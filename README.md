@@ -66,6 +66,20 @@ Retrieval evaluation uses human relevance judgments and ordered chunk IDs. Gener
 
 **Keep chunking fixed across compared runs.** Changing chunk size or overlap changes chunk boundaries and IDs, invalidating current chunk-level relevance labels. Relabel or add source-span judgments before comparing different chunking strategies.
 
+## Creating a Golden Dataset
+
+1. Place the exact source PDF at `datasets/raw/osha3120.pdf`. Raw files are ignored by Git. Run `groundtruth prepare-osha` once to produce the local `datasets/osha/corpus.jsonl` with fixed 150-word chunks and 30-word overlap, plus `datasets/osha/corpus_manifest.json` with source and corpus hashes. The command refuses to replace an existing canonical corpus.
+2. Review or append answerable, unlabeled questions in `datasets/osha/questions_draft.jsonl`. Do not put `relevant_chunk_ids` in this file. The ten initial questions are prompts for human review, not labels.
+3. Run `groundtruth label --corpus datasets/osha/corpus.jsonl --questions datasets/osha/questions_draft.jsonl --output datasets/osha/eval.jsonl`. Candidate discovery unions Dense, BM25, and Hybrid results. Use `more`, `search <phrase>`, or `inspect <chunk ID>` to check source passages. Select one or several IDs and explicitly confirm each answer. Progress is saved beside the draft file and resumes after interruption.
+4. Run `groundtruth label-status --questions datasets/osha/questions_draft.jsonl --dataset datasets/osha/eval.jsonl`, then `groundtruth audit-dataset --corpus datasets/osha/corpus.jsonl --questions datasets/osha/questions_draft.jsonl --dataset datasets/osha/eval.jsonl`. Optional review copy: `groundtruth export-review --corpus datasets/osha/corpus.jsonl --dataset datasets/osha/eval.jsonl --output reports/tmp/osha-review.md`.
+5. After at least 25 answerable questions are explicitly verified and audit passes, run `groundtruth benchmark-osha`. It evaluates Dense, BM25, Hybrid, and Hybrid + CrossEncoder on the same corpus and labels. Run JSON, summary, and ranking-only error analysis go to `reports/benchmarks/osha/`.
+
+The OSHA corpus and in-progress/final local labels are ignored to keep source text and unfinished work out of tooling commits. A later, separate data commit may include human-verified labels after review. See [golden dataset guidance](docs/GOLDEN_DATASET.md).
+
+## OSHA Benchmark
+
+OSHA benchmark pending human verification. The exact source PDF is not present in this checkout, and no OSHA corpus or final labels have been generated.
+
 ## Benchmark Results
 
 Benchmark pending — results will be generated from the real evaluation dataset.

@@ -1,6 +1,7 @@
 """Command line entry point."""
 
 import json
+import sys
 from pathlib import Path
 
 import typer
@@ -13,7 +14,16 @@ from groundtruth_rag.datasets import DatasetValidationError, load_dataset, tag_c
 from groundtruth_rag.evaluation.runner import BenchmarkRun, evaluate_retriever
 from groundtruth_rag.ingestion.corpus import load_corpus
 from groundtruth_rag.ingestion.pipeline import ingest as ingest_documents
+from groundtruth_rag.labeling.audit import audit_dataset as run_audit
+from groundtruth_rag.labeling.interactive import run_label_loop
+from groundtruth_rag.labeling.manifest import CorpusManifest, file_sha256, prepare_osha as prepare_osha_corpus
+from groundtruth_rag.labeling.models import atomic_write, load_questions
+from groundtruth_rag.labeling.review import export_review as write_review, label_status as get_label_status
+from groundtruth_rag.labeling.session import LabelSession, load_session
+from groundtruth_rag.reporting.benchmark import summarize_runs
 from groundtruth_rag.reporting.compare import compare_runs
+from groundtruth_rag.retrieval.bm25 import BM25Retriever
+from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
 from groundtruth_rag.retrieval.dense import corpus_fingerprint
 from groundtruth_rag.retrieval.static import StaticRetriever
@@ -99,6 +109,170 @@ def evaluate(
     typer.echo(f"Run: {output}; queries: {run.query_count}")
     typer.echo("Metrics: " + ", ".join(f"{name}={value:.4f}" for name, value in run.aggregate_metrics.items()))
     typer.echo(f"Latency ms: mean={run.latency.mean_ms:.2f}, p50={run.latency.p50_ms:.2f}, p95={run.latency.p95_ms:.2f}")
+
+
+@app.command("prepare-osha")
+def prepare_osha(
+    source: Path = typer.Option(Path("datasets/raw/osha3120.pdf"), "--source"),
+    corpus: Path = typer.Option(Path("datasets/osha/corpus.jsonl"), "--corpus"),
+    manifest: Path = typer.Option(Path("datasets/osha/corpus_manifest.json"), "--manifest"),
+) -> None:
+    """Ingest the supplied OSHA PDF once with fixed 150/30-word chunking."""
+    try:
+        result = prepare_osha_corpus(source, corpus, manifest)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"OSHA corpus preparation failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Corpus: {corpus}; manifest: {manifest}")
+    typer.echo(f"Documents: {result.document_count}; pages: {result.page_count}; chunks: {result.chunk_count}")
+
+
+@app.command()
+def label(
+    corpus: Path = typer.Option(..., "--corpus"),
+    questions: Path = typer.Option(..., "--questions"),
+    output: Path = typer.Option(..., "--output"),
+    candidate_depth: int = typer.Option(10, "--candidate-depth", min=1),
+    reconcile_output: bool = typer.Option(False, "--reconcile-output"),
+) -> None:
+    """Review and explicitly verify chunk relevance labels in the terminal."""
+    try:
+        if output.resolve() in {corpus.resolve(), questions.resolve()}:
+            raise ValueError("output must not overwrite corpus or draft questions")
+        chunks = load_corpus(corpus)
+        drafts = load_questions(questions)
+        fingerprint = corpus_fingerprint(chunks)
+        manifest_path = corpus.parent / "corpus_manifest.json"
+        if manifest_path.exists():
+            manifest = CorpusManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+            if manifest.corpus_fingerprint != fingerprint:
+                raise ValueError("corpus differs from manifest")
+        elif corpus.parent.name.lower() == "osha":
+            raise ValueError(f"canonical OSHA manifest missing: {manifest_path}")
+        if reconcile_output and not typer.confirm("Replace golden output from saved progress?", default=False):
+            raise ValueError("output reconciliation was not confirmed")
+        state, progress = load_session(questions, output, drafts, fingerprint,
+                                       reconcile_output=reconcile_output)
+        session = LabelSession(state, progress, output, {chunk.chunk_id for chunk in chunks})
+        dense = DenseRetriever()
+        bm25 = BM25Retriever()
+        dense.index(chunks)
+        bm25.index(chunks)
+        run_label_loop(session, chunks, dense, bm25, candidate_depth)
+    except (OSError, ValueError, RuntimeError, ValidationError) as exc:
+        typer.echo(f"Labeling failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+
+@app.command("label-status")
+def label_status(
+    questions: Path = typer.Option(..., "--questions"),
+    dataset: Path = typer.Option(..., "--dataset"),
+) -> None:
+    """Show human review progress."""
+    try:
+        status = get_label_status(questions, dataset)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Status failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Total: {status['total']}; verified: {status['verified']}; "
+               f"unlabeled: {status['unlabeled']}; in progress: {status['in_progress']}; "
+               f"skipped: {status['skipped']}; completion: {status['completion_pct']}%")
+
+
+@app.command("audit-dataset")
+def audit_dataset(
+    corpus: Path = typer.Option(..., "--corpus"),
+    questions: Path = typer.Option(..., "--questions"),
+    dataset: Path = typer.Option(..., "--dataset"),
+    manifest: Path | None = typer.Option(None, "--manifest"),
+) -> None:
+    """Audit human labels, provenance, and fixed-corpus compatibility."""
+    try:
+        report = run_audit(corpus, questions, dataset, manifest or corpus.parent / "corpus_manifest.json")
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Audit failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Questions: {report.question_count}; verified: {report.verified_count}; "
+               f"reference answers: {report.reference_answer_count}")
+    typer.echo(f"Tags: {json.dumps(report.tag_counts, sort_keys=True)}")
+    typer.echo(f"Source/pages: {json.dumps(report.source_pages, sort_keys=True)}")
+    for warning in report.warnings:
+        typer.echo(f"Warning: {warning}")
+    for error in report.errors:
+        typer.echo(f"Error: {error}", err=True)
+    typer.echo(f"Audit: {'passed' if report.passed else 'failed'}")
+    if not report.passed:
+        raise typer.Exit(1)
+
+
+@app.command("export-review")
+def export_review(
+    corpus: Path = typer.Option(..., "--corpus"),
+    dataset: Path = typer.Option(..., "--dataset"),
+    output: Path = typer.Option(..., "--output"),
+) -> None:
+    """Export verified labels and their source passages to Markdown."""
+    try:
+        if output.resolve() in {corpus.resolve(), dataset.resolve()}:
+            raise ValueError("output must not overwrite corpus or dataset")
+        count = write_review(corpus, dataset, output)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Review export failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Review: {output}; questions: {count}")
+
+
+@app.command("benchmark-osha")
+def benchmark_osha(
+    corpus: Path = typer.Option(Path("datasets/osha/corpus.jsonl"), "--corpus"),
+    questions: Path = typer.Option(Path("datasets/osha/questions_draft.jsonl"), "--questions"),
+    dataset: Path = typer.Option(Path("datasets/osha/eval.jsonl"), "--dataset"),
+    manifest: Path = typer.Option(Path("datasets/osha/corpus_manifest.json"), "--manifest"),
+    output_dir: Path = typer.Option(Path("reports/benchmarks/osha"), "--output-dir"),
+) -> None:
+    """Run four retrievers only after the human golden dataset passes audit."""
+    try:
+        report = run_audit(corpus, questions, dataset, manifest)
+        if not report.passed:
+            raise ValueError("audit failed: " + "; ".join(report.errors))
+        if report.verified_count < 25:
+            raise ValueError("first benchmark requires at least 25 human-verified questions")
+        chunks = load_corpus(corpus)
+        queries = load_dataset(dataset)
+        provenance = CorpusManifest.model_validate_json(manifest.read_text(encoding="utf-8"))
+        if (provenance.corpus_name != "OSHA 3120 Lockout/Tagout"
+                or not provenance.source_document.lower().endswith(".pdf")
+                or (provenance.chunk_size, provenance.chunk_overlap) != (150, 30)):
+            raise ValueError("benchmark requires the canonical OSHA PDF manifest and 150/30 chunking")
+        fingerprint = corpus_fingerprint(chunks)
+        runs: dict[str, BenchmarkRun] = {}
+        root = Path(__file__).resolve().parents[2]
+        for name in ("dense", "bm25", "hybrid", "hybrid_rerank"):
+            config_path = root / "configs" / f"{name}.yaml"
+            run_config = load_config(config_path)
+            retriever = build_retriever(run_config)
+            retriever.index(chunks)
+            runs[name] = evaluate_retriever(
+                retriever, queries, dataset=str(dataset.resolve()),
+                configuration_name=run_config.name,
+                configuration={**run_config.model_dump(), "corpus_fingerprint": fingerprint,
+                               "dataset_sha256": file_sha256(dataset),
+                               "config_sha256": file_sha256(config_path),
+                               "source_sha256": provenance.source_sha256,
+                               "package_version": __version__, "python_version": sys.version.split()[0]},
+            )
+        summary, markdown, analysis = summarize_runs(runs)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for name, run in runs.items():
+            atomic_write(output_dir / f"{name}.json", run.model_dump_json(indent=2) + "\n")
+        atomic_write(output_dir / "summary.json", json.dumps(summary, indent=2) + "\n")
+        atomic_write(output_dir / "SUMMARY.md", markdown)
+        atomic_write(output_dir / "error_analysis.json", json.dumps(analysis, indent=2) + "\n")
+    except (OSError, ValueError, RuntimeError, ValidationError) as exc:
+        typer.echo(f"Benchmark blocked or failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Benchmark results: {output_dir}; verified questions: {report.verified_count}")
 
 
 @app.command("evaluate-demo")

@@ -16,5 +16,8 @@ build/
 dist/
 datasets/raw/
 datasets/private/
+datasets/osha/corpus.jsonl
+datasets/osha/eval.jsonl
+datasets/osha/*.progress.json
 reports/tmp/
 reports/drafts/

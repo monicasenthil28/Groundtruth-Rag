@@ -1,0 +1,10 @@
+{"query_id":"q001","query":"What is lockout/tagout?","tags":["definition"],"status":"unlabeled"}
+{"query_id":"q002","query":"What types of hazardous energy are covered by the standard?","tags":["definition","requirements"],"status":"unlabeled"}
+{"query_id":"q003","query":"What steps must workers follow before beginning service or maintenance?","tags":["procedure"],"status":"unlabeled"}
+{"query_id":"q004","query":"What are the limitations of tagout devices?","tags":["requirements","comparison"],"status":"unlabeled"}
+{"query_id":"q005","query":"What training is required for authorized employees?","tags":["training"],"status":"unlabeled"}
+{"query_id":"q006","query":"How often must energy-control procedures be inspected?","tags":["exact_fact","policy"],"status":"unlabeled"}
+{"query_id":"q007","query":"When can tagout be used instead of lockout?","tags":["policy","comparison"],"status":"unlabeled"}
+{"query_id":"q008","query":"What characteristics must lockout and tagout devices have?","tags":["requirements"],"status":"unlabeled"}
+{"query_id":"q009","query":"What is the minimum unlocking strength required for tag attachments?","tags":["exact_fact","requirements"],"status":"unlabeled"}
+{"query_id":"q010","query":"Why is lockout considered more effective than tagout?","tags":["comparison"],"status":"unlabeled"}
