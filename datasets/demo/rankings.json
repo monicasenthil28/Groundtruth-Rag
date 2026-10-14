@@ -1,0 +1,5 @@
+{
+  "What color is the demo apple?": ["fruit:1", "stone:1", "sky:1"],
+  "Which demo object has wheels?": ["stone:1", "vehicle:1", "fruit:1"],
+  "Which demo objects are blue?": ["sky:1", "vehicle:1", "stone:1"]
+}

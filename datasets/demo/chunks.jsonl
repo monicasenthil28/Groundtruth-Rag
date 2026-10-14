@@ -1,0 +1,4 @@
+{"chunk_id":"fruit:1","document_id":"fruit","source":"synthetic-demo","page":1,"text":"The demo apple is red."}
+{"chunk_id":"vehicle:1","document_id":"vehicle","source":"synthetic-demo","page":1,"text":"The demo bicycle is blue and has wheels."}
+{"chunk_id":"sky:1","document_id":"sky","source":"synthetic-demo","page":1,"text":"The demo sky is blue."}
+{"chunk_id":"stone:1","document_id":"stone","source":"synthetic-demo","page":1,"text":"The demo stone is gray."}
