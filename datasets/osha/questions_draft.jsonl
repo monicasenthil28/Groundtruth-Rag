@@ -8,3 +8,23 @@
 {"query_id":"q008","query":"What characteristics must lockout and tagout devices have?","tags":["requirements"],"status":"unlabeled"}
 {"query_id":"q009","query":"What is the minimum unlocking strength required for tag attachments?","tags":["exact_fact","requirements"],"status":"unlabeled"}
 {"query_id":"q010","query":"Why is lockout considered more effective than tagout?","tags":["comparison"],"status":"unlabeled"}
+{"query_id":"q011","query":"What is the purpose of an energy control program?","tags":["policy"],"status":"unlabeled"}
+{"query_id":"q012","query":"What information must an energy control procedure include?","tags":["requirements"],"status":"unlabeled"}
+{"query_id":"q013","query":"What must workers do to prepare a machine or equipment for shutdown?","tags":["procedure"],"status":"unlabeled"}
+{"query_id":"q014","query":"How must a machine or equipment be isolated from its energy sources before servicing?","tags":["procedure"],"status":"unlabeled"}
+{"query_id":"q015","query":"What must be done with stored or residual energy after lockout or tagout devices are applied?","tags":["procedure"],"status":"unlabeled"}
+{"query_id":"q016","query":"How must workers verify that a machine has been isolated and deenergized before servicing begins?","tags":["procedure"],"status":"unlabeled"}
+{"query_id":"q017","query":"What steps must be completed before lockout or tagout devices are removed and equipment is reenergized?","tags":["reenergization"],"status":"unlabeled"}
+{"query_id":"q018","query":"What must be checked to make sure employees are safely positioned before a machine is reenergized?","tags":["reenergization"],"status":"unlabeled"}
+{"query_id":"q019","query":"When must affected employees be notified during the lockout/tagout process?","tags":["procedure"],"status":"unlabeled"}
+{"query_id":"q020","query":"What is considered an energy-isolating device that is capable of being locked out?","tags":["definition"],"status":"unlabeled"}
+{"query_id":"q021","query":"When must lockout be used instead of tagout?","tags":["policy"],"status":"unlabeled"}
+{"query_id":"q022","query":"What additional protection is required when tagout is used on equipment that could otherwise be locked out?","tags":["requirements"],"status":"unlabeled"}
+{"query_id":"q023","query":"What should newly installed, renovated, or modified machinery be capable of regarding lockout?","tags":["requirements"],"status":"unlabeled"}
+{"query_id":"q024","query":"Why does a tagout device provide less protection than a lockout device?","tags":["comparison"],"status":"unlabeled"}
+{"query_id":"q025","query":"What durability requirements apply to lockout and tagout devices?","tags":["device_requirements"],"status":"unlabeled"}
+{"query_id":"q026","query":"How must lockout and tagout devices be standardized?","tags":["device_requirements"],"status":"unlabeled"}
+{"query_id":"q027","query":"What identifying information must lockout and tagout devices contain?","tags":["device_requirements"],"status":"unlabeled"}
+{"query_id":"q028","query":"What requirements apply to the attachment devices used with tags?","tags":["device_requirements"],"status":"unlabeled"}
+{"query_id":"q029","query":"What information must authorized employees receive during lockout/tagout training?","tags":["training"],"status":"unlabeled"}
+{"query_id":"q030","query":"What must affected employees understand about the energy-control procedure?","tags":["training"],"status":"unlabeled"}
