@@ -10,6 +10,8 @@ from groundtruth_rag.labeling.manifest import CorpusManifest, file_sha256
 from groundtruth_rag.labeling.models import LabelState, load_questions, progress_path
 from groundtruth_rag.retrieval.dense import corpus_fingerprint
 
+MIN_OSHA_BENCHMARK_QUERIES = 25
+
 
 @dataclass
 class AuditReport:
@@ -17,6 +19,12 @@ class AuditReport:
     warnings: list[str] = field(default_factory=list)
     question_count: int = 0
     verified_count: int = 0
+    skipped_count: int = 0
+    skipped_ids: list[str] = field(default_factory=list)
+    unlabeled_count: int = 0
+    in_progress_count: int = 0
+    benchmark_query_count: int = 0
+    minimum_required: int = 0
     reference_answer_count: int = 0
     tag_counts: dict[str, int] = field(default_factory=dict)
     source_pages: dict[str, list[int | None]] = field(default_factory=dict)
@@ -31,13 +39,15 @@ def audit_dataset(corpus_path: Path, questions_path: Path, dataset_path: Path,
     chunks = load_corpus(corpus_path)
     questions = load_questions(questions_path)
     labels = load_dataset(dataset_path)
-    report = AuditReport(question_count=len(questions), verified_count=len(labels))
+    report = AuditReport(question_count=len(questions), benchmark_query_count=len(labels))
     by_id = {chunk.chunk_id: chunk for chunk in chunks}
     fingerprint = corpus_fingerprint(chunks)
     if not manifest_path.exists():
         report.errors.append(f"corpus manifest missing: {manifest_path}")
     else:
         manifest = CorpusManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+        if manifest.corpus_name.startswith("OSHA"):
+            report.minimum_required = MIN_OSHA_BENCHMARK_QUERIES
         if manifest.corpus_fingerprint != fingerprint or manifest.chunk_count != len(chunks):
             report.errors.append("corpus fingerprint or chunk count differs from manifest")
         if manifest.corpus_name.startswith("OSHA") and (manifest.chunk_size, manifest.chunk_overlap) != (150, 30):
@@ -60,16 +70,44 @@ def audit_dataset(corpus_path: Path, questions_path: Path, dataset_path: Path,
 
     draft_by_id = {item.query_id: item for item in questions}
     labels_by_id = {item.query_id: item for item in labels}
-    if set(labels_by_id) != set(draft_by_id):
-        report.errors.append("not every draft question has a verified golden label")
     progress_by_id = {item.query_id: item for item in state.questions} if state else {}
     if state and set(progress_by_id) != set(draft_by_id):
         report.errors.append("label progress does not match draft questions")
+    if state:
+        for query_id, draft in draft_by_id.items():
+            record = progress_by_id.get(query_id)
+            if record is None:
+                continue
+            if record.query != draft.query:
+                report.errors.append(f"{query_id}: query text differs from draft in progress")
+            if record.status == "verified":
+                report.verified_count += 1
+                if query_id not in labels_by_id:
+                    report.errors.append(f"{query_id}: verified question missing from golden dataset")
+            elif record.status == "skipped":
+                report.skipped_ids.append(query_id)
+                if query_id in labels_by_id:
+                    report.errors.append(f"{query_id}: skipped question appears in golden dataset")
+            elif record.status == "unlabeled":
+                report.unlabeled_count += 1
+                report.errors.append(f"{query_id}: draft question is unlabeled")
+            else:
+                report.in_progress_count += 1
+                report.errors.append(f"{query_id}: draft question is in progress")
+        report.skipped_count = len(report.skipped_ids)
+        if report.verified_count + report.skipped_count != report.question_count:
+            report.errors.append("not every draft question has a completed human review")
+    if report.minimum_required and report.benchmark_query_count < report.minimum_required:
+        report.errors.append(
+            f"OSHA benchmark requires at least {report.minimum_required} verified answerable queries"
+        )
 
     pages: dict[str, set[int | None]] = {}
     tags: Counter[str] = Counter()
     for label in labels:
         draft = draft_by_id.get(label.query_id)
+        if draft is None:
+            report.errors.append(f"{label.query_id}: golden label absent from draft questions")
         if draft and label.query != draft.query:
             report.errors.append(f"{label.query_id}: query text differs from draft")
         record = progress_by_id.get(label.query_id)

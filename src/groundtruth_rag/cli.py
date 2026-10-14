@@ -14,7 +14,9 @@ from groundtruth_rag.datasets import DatasetValidationError, load_dataset, tag_c
 from groundtruth_rag.evaluation.runner import BenchmarkRun, evaluate_retriever
 from groundtruth_rag.ingestion.corpus import load_corpus
 from groundtruth_rag.ingestion.pipeline import ingest as ingest_documents
-from groundtruth_rag.labeling.audit import audit_dataset as run_audit
+from groundtruth_rag.labeling.audit import (
+    MIN_OSHA_BENCHMARK_QUERIES, audit_dataset as run_audit,
+)
 from groundtruth_rag.labeling.interactive import run_label_loop
 from groundtruth_rag.labeling.manifest import CorpusManifest, file_sha256, prepare_osha as prepare_osha_corpus
 from groundtruth_rag.labeling.models import atomic_write, load_questions
@@ -177,7 +179,10 @@ def label_status(
         raise typer.Exit(1) from exc
     typer.echo(f"Total: {status['total']}; verified: {status['verified']}; "
                f"unlabeled: {status['unlabeled']}; in progress: {status['in_progress']}; "
-               f"skipped: {status['skipped']}; completion: {status['completion_pct']}%")
+               f"skipped: {status['skipped']}; reviewed: {status['reviewed']}/{status['total']}; "
+               f"benchmark queries: {status['benchmark_queries']}; "
+               f"reviewed completion: {status['reviewed_completion_pct']}%; "
+               f"verified answerable: {status['completion_pct']}%")
 
 
 @app.command("audit-dataset")
@@ -193,8 +198,13 @@ def audit_dataset(
     except (OSError, ValueError, ValidationError) as exc:
         typer.echo(f"Audit failed: {exc}", err=True)
         raise typer.Exit(1) from exc
-    typer.echo(f"Questions: {report.question_count}; verified: {report.verified_count}; "
+    typer.echo(f"Total draft questions: {report.question_count}; verified: {report.verified_count}; "
+               f"skipped: {report.skipped_count}; unlabeled: {report.unlabeled_count}; "
+               f"in progress: {report.in_progress_count}; "
+               f"answerable benchmark queries: {report.benchmark_query_count}; "
+               f"minimum required: {report.minimum_required}; "
                f"reference answers: {report.reference_answer_count}")
+    typer.echo(f"Skipped IDs: {', '.join(report.skipped_ids) or 'none'}")
     typer.echo(f"Tags: {json.dumps(report.tag_counts, sort_keys=True)}")
     typer.echo(f"Source/pages: {json.dumps(report.source_pages, sort_keys=True)}")
     for warning in report.warnings:
@@ -236,8 +246,8 @@ def benchmark_osha(
         report = run_audit(corpus, questions, dataset, manifest)
         if not report.passed:
             raise ValueError("audit failed: " + "; ".join(report.errors))
-        if report.verified_count < 25:
-            raise ValueError("first benchmark requires at least 25 human-verified questions")
+        if report.benchmark_query_count < MIN_OSHA_BENCHMARK_QUERIES:
+            raise ValueError("first benchmark requires at least 25 human-verified answerable questions")
         chunks = load_corpus(corpus)
         queries = load_dataset(dataset)
         provenance = CorpusManifest.model_validate_json(manifest.read_text(encoding="utf-8"))

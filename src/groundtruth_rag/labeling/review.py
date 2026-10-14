@@ -30,8 +30,11 @@ def label_status(questions_path: Path, dataset_path: Path) -> dict[str, int | fl
     elif verified:
         raise ValueError("verified progress exists but golden dataset is missing")
     total = len(questions)
+    reviewed = verified + counts["skipped"]
     return {"total": total, "verified": verified, "unlabeled": counts["unlabeled"],
             "in_progress": counts["in_progress"], "skipped": counts["skipped"],
+            "reviewed": reviewed, "benchmark_queries": verified,
+            "reviewed_completion_pct": round(reviewed / total * 100, 1),
             "completion_pct": round(verified / total * 100, 1)}
 
 

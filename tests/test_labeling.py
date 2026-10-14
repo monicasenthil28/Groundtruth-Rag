@@ -13,7 +13,9 @@ from groundtruth_rag.ingestion.corpus import load_corpus, write_corpus
 from groundtruth_rag.labeling.audit import audit_dataset
 from groundtruth_rag.labeling.candidates import discover_candidates, search_corpus
 from groundtruth_rag.labeling.manifest import CorpusManifest, file_sha256, prepare_osha
-from groundtruth_rag.labeling.models import LabelState, load_questions, progress_path
+from groundtruth_rag.labeling.models import (
+    LabelRecord, LabelState, load_questions, progress_path, save_state,
+)
 from groundtruth_rag.labeling.review import export_review, label_status
 from groundtruth_rag.labeling.session import LabelSession, load_session
 from groundtruth_rag.reporting.benchmark import summarize_runs
@@ -206,3 +208,110 @@ def test_prepare_osha_manifest_from_supplied_pdf(tmp_path: Path, monkeypatch):
     assert manifest.corpus_fingerprint == corpus_fingerprint(load_corpus(corpus))
     with pytest.raises(ValueError, match="refusing to regenerate"):
         prepare_osha(source, corpus, manifest_path)
+
+
+def osha_review_fixture(tmp_path: Path, verified: int, pending_status: str = "skipped"):
+    chunks, corpus, questions, dataset, manifest_path = fixture_files(tmp_path)
+    drafts = [{"query_id": f"q{number:03d}", "query": f"Question {number}?",
+               "tags": ["policy"], "status": "unlabeled"}
+              for number in range(1, 31)]
+    questions.write_text("\n".join(json.dumps(draft) for draft in drafts) + "\n", encoding="utf-8")
+    records = [LabelRecord(query_id=draft["query_id"], query=draft["query"],
+                           tags=draft["tags"], selected_chunk_ids=["a"] if index < verified else [],
+                           reference_answer="Source-grounded answer" if index < verified else None,
+                           status="verified" if index < verified else pending_status,
+                           verified_at=datetime.now(timezone.utc) if index < verified else None)
+               for index, draft in enumerate(drafts)]
+    state = LabelState(corpus_fingerprint=corpus_fingerprint(chunks), questions=records)
+    save_state(state, progress_path(questions), dataset)
+    source = tmp_path / "osha3120.pdf"
+    source.write_bytes(b"synthetic source for audit tests")
+    manifest = CorpusManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+    manifest.corpus_name = "OSHA 3120 Lockout/Tagout"
+    manifest.source_document = source.name
+    manifest.source_relative_path = source.name
+    manifest.source_sha256 = file_sha256(source)
+    manifest.chunk_size = 150
+    manifest.chunk_overlap = 30
+    manifest_path.write_text(manifest.model_dump_json(), encoding="utf-8")
+    return corpus, questions, dataset, manifest_path
+
+
+@pytest.mark.parametrize("verified,status,passes", [
+    (30, "skipped", True),
+    (29, "skipped", True),
+    (24, "skipped", False),
+    (29, "unlabeled", False),
+    (29, "in_progress", False),
+])
+def test_osha_audit_review_completion(tmp_path: Path, verified: int, status: str, passes: bool):
+    corpus, questions, dataset, manifest = osha_review_fixture(tmp_path, verified, status)
+    report = audit_dataset(corpus, questions, dataset, manifest)
+    assert report.passed is passes
+    assert report.question_count == 30
+    assert report.verified_count == report.benchmark_query_count == verified
+    assert report.minimum_required == 25
+    assert report.skipped_count == (30 - verified if status == "skipped" else 0)
+    assert report.unlabeled_count == (30 - verified if status == "unlabeled" else 0)
+    assert report.in_progress_count == (30 - verified if status == "in_progress" else 0)
+    if verified == 29 and status == "skipped":
+        assert report.skipped_ids == ["q030"]
+        assert "q030" not in {query.query_id for query in load_dataset(dataset)}
+        summary = label_status(questions, dataset)
+        assert summary["reviewed"] == 30
+        assert summary["reviewed_completion_pct"] == 100.0
+        assert summary["completion_pct"] == 96.7
+
+
+def test_osha_audit_rejects_skipped_golden_and_bad_relevance(tmp_path: Path):
+    corpus, questions, dataset, manifest = osha_review_fixture(tmp_path, 29)
+    original = dataset.read_text(encoding="utf-8")
+    skipped = {"query_id": "q030", "query": "Question 30?",
+               "relevant_chunk_ids": ["a"], "reference_answer": "invented", "tags": ["policy"]}
+    dataset.write_text(original + json.dumps(skipped) + "\n", encoding="utf-8")
+    assert any("skipped question appears" in error
+               for error in audit_dataset(corpus, questions, dataset, manifest).errors)
+    records = [json.loads(line) for line in original.splitlines()]
+    records[0]["relevant_chunk_ids"] = []
+    dataset.write_text("\n".join(json.dumps(record) for record in records) + "\n",
+                       encoding="utf-8")
+    with pytest.raises(ValueError, match="relevant_chunk_ids must be a non-empty list"):
+        audit_dataset(corpus, questions, dataset, manifest)
+    records[0]["relevant_chunk_ids"] = ["missing"]
+    dataset.write_text("\n".join(json.dumps(record) for record in records) + "\n",
+                       encoding="utf-8")
+    assert any("orphaned chunk IDs" in error
+               for error in audit_dataset(corpus, questions, dataset, manifest).errors)
+
+
+def test_osha_benchmark_gate_uses_only_verified_queries(tmp_path: Path, monkeypatch):
+    corpus, questions, dataset, manifest = osha_review_fixture(tmp_path, 29)
+    seen: list[list[str]] = []
+
+    class StubRun:
+        def model_dump_json(self, **kwargs):
+            return "{}"
+
+    def evaluate_stub(retriever, queries, **kwargs):
+        seen.append([query.query_id for query in queries])
+        return StubRun()
+
+    monkeypatch.setattr("groundtruth_rag.cli.build_retriever", lambda config: StaticRetriever({}))
+    monkeypatch.setattr("groundtruth_rag.cli.evaluate_retriever", evaluate_stub)
+    monkeypatch.setattr("groundtruth_rag.cli.summarize_runs",
+                        lambda runs: ({}, "summary", {}))
+    result = CliRunner().invoke(app, ["benchmark-osha", "--corpus", str(corpus),
+                                       "--questions", str(questions), "--dataset", str(dataset),
+                                       "--manifest", str(manifest), "--output-dir", str(tmp_path / "runs")])
+    assert result.exit_code == 0, result.output
+    assert len(seen) == 4
+    assert all(len(ids) == 29 and "q030" not in ids for ids in seen)
+
+
+def test_osha_benchmark_gate_rejects_under_minimum(tmp_path: Path):
+    corpus, questions, dataset, manifest = osha_review_fixture(tmp_path, 24)
+    result = CliRunner().invoke(app, ["benchmark-osha", "--corpus", str(corpus),
+                                       "--questions", str(questions), "--dataset", str(dataset),
+                                       "--manifest", str(manifest)])
+    assert result.exit_code != 0
+    assert "at least 25" in result.output
