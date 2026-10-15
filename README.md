@@ -1,140 +1,85 @@
 # Groundtruth-Rag
 
-## RAG Retrieval Evaluation & Regression Platform
+**Measure retrieval changes against human judgments, not chatbot impressions.**
 
-Groundtruth-Rag is a domain-agnostic foundation for comparing retrieval architectures against a human-verified golden dataset. It is intended to make changes to chunking, embeddings, retrieval, and reranking measurable instead of relying on subjective chatbot testing.
+Groundtruth-Rag is a Python retrieval engineering and evaluation platform. It builds a deterministic corpus, compares four retrieval strategies on human-verified relevance labels, and carries evidence through regression tests, failure analysis, experiments, robustness checks, and a human-gated release process. It is not a chatbot or a RAG application UI.
 
-The supported comparison is **Dense** vs **Dense + BM25** vs **Dense + BM25 + CrossEncoder**. BM25 is also available as a standalone configuration. A human-reviewed OSHA retrieval benchmark has been run locally; regression baselines preserve its aggregate measurements without including source text or labels.
+**Current state:** the planned v1.0 *retrieval scope* is complete. The package version remains `0.1.0`. OSHA retrieval **v2** is active, with **v1** preserved as an explicit rollback target. Generation evaluation is not implemented.
 
-## Current Scope
+![Groundtruth-Rag architecture](docs/assets/architecture/groundtruth-rag.svg)
 
-- Typed contracts for chunks, evaluation queries, hits, and retrieval runs
-- Abstract retriever and separate retrieval/generation metric interfaces
-- Deterministic Recall@K, Precision@K, Hit Rate@K, reciprocal rank, MRR, and binary nDCG@K
-- Retrieval evaluation runner with per-query results, aggregate metrics, and mean/p50/p95 retrieval latency
-- JSONL dataset validation, versioned JSON run results, and metric-by-metric comparison
-- A fixed-ranking, synthetic demo for offline evaluation; it is not semantic search or a benchmark
-- PDF, text, and Markdown ingestion with deterministic word chunking and versioned corpus JSONL
-- Dense, BM25, Hybrid RRF, and Hybrid + CrossEncoder retrievers
-- Package and test foundation for Python 3.11+
+[Explore the interactive architecture](docs/assets/architecture/groundtruth-rag.html) · [Edit the source-backed diagram](docs/assets/architecture/groundtruth-rag.architecture.json)
 
-See [architecture](docs/ARCHITECTURE.md) for the planned evaluation flow.
+## What gets measured
 
-Saved baseline and candidate runs can now be assessed with paired query bootstrap analysis; see [robustness](docs/ROBUSTNESS.md). This is advisory evidence, separate from regression policy and promotion decisions.
+The fixed OSHA benchmark contains **29 human-verified, answerable queries**. Question `q013` was reviewed and skipped; `q019` remains included. One pinned 45-page PDF becomes **91 chunks** using 150-word chunks with 30-word overlap. The same corpus and labels are used for Dense, BM25, Hybrid Reciprocal Rank Fusion (RRF), and Hybrid + CrossEncoder. Runs record Recall@K, Precision@K, Hit Rate@K, MRR, nDCG@K, and retrieval latency.
 
-Versioned candidate promotion is explicitly human-gated. The [OSHA v2 manifest](promotions/osha/v2.yaml) is approved, validated, baselined, and **active**. The v1 config and baselines remain unchanged and available for explicit rollback. See [promotion](docs/PROMOTION.md) for the lifecycle and rollback command.
+| Retriever | Recall@3 | nDCG@3 | MRR |
+| --- | ---: | ---: | ---: |
+| Dense | 0.4655 | 0.4113 | 0.4999 |
+| BM25 | 0.5690 | 0.5462 | 0.6518 |
+| Hybrid RRF | 0.5948 | 0.5549 | 0.6402 |
+| Hybrid + CrossEncoder (active v2) | **0.8534** | **0.7764** | **0.7989** |
 
-## Development
+These are results for this fixed OSHA benchmark, not universal retrieval claims. The active v2 reranker (`rerank-pool-30`) matched the original Hybrid + CrossEncoder baseline on Recall@3 and nDCG@3; its MRR result was **inconclusive**. The observed MRR delta was `-0.003448`, with a 95% paired-bootstrap interval of `[-0.010345, 0]`. Latency is environment-sensitive: the Phase 11 median trial p95 was **1365.47 ms**, while the v2 validation run p95 was **1416.03 ms**. Do not read this as a general speed improvement. Metrics above come from [the committed v2 aggregate baseline](baselines/osha/v2.json); methodology is in [benchmark reproducibility](docs/BENCHMARK_REPRODUCIBILITY.md) and [robustness](docs/ROBUSTNESS.md).
+
+## Engineering loop
+
+`Change → benchmark → aggregate and query-level regression → failure forensics → candidate experiment and Pareto review → paired robustness analysis → human approval → validation → versioned baseline → activation or rollback`
+
+Every promotion is tied to the same benchmark identity. Golden labels are never silently rewritten; incompatible corpus or dataset identities are rejected by the comparison path. Changing chunk boundaries changes chunk IDs and invalidates the existing chunk-level judgments. [v2's manifest](promotions/osha/v2.yaml) is `ACTIVE` after a passing validation; [the registry](configs/versions/osha/registry.yaml) points to v2 and retains v1 for rollback. The [v1](baselines/osha/v1.json) and [v2](baselines/osha/v2.json) aggregate baselines and their [v1](baselines/osha/v1.query.json) and [v2](baselines/osha/v2.query.json) query baselines remain versioned.
+
+## Run it
+
+Python 3.11+ is required. The `models` extra is needed for real Dense and CrossEncoder runs; tests use fakes and do not download models.
 
 ```bash
 python -m pip install -e ".[dev,models]"
-python -m pytest
-python -m compileall src
 groundtruth --help
-groundtruth version
-groundtruth validate-dataset datasets/demo/queries.jsonl
-mkdir -p reports/tmp
-groundtruth evaluate-demo reports/tmp/baseline.json
-groundtruth evaluate-demo reports/tmp/candidate.json
-groundtruth compare reports/tmp/baseline.json reports/tmp/candidate.json
+groundtruth benchmark-verify osha
+groundtruth config-status osha
 ```
 
-These two demo runs contain identical fixed rankings; their latency will vary. Temporary results in `reports/tmp/` are ignored by Git.
-
-## Ingest And Evaluate
+To reproduce the historical fixed benchmark, acquire the [pinned source](benchmarks/osha/benchmark.yaml) (or pass a verified local PDF), then run:
 
 ```bash
-groundtruth ingest --input path/to/documents --output datasets/corpus.jsonl --chunk-size 150 --chunk-overlap 30
-groundtruth evaluate --corpus datasets/corpus.jsonl --dataset datasets/eval.jsonl --config configs/dense.yaml --output reports/dense.json
-groundtruth evaluate --corpus datasets/corpus.jsonl --dataset datasets/eval.jsonl --config configs/hybrid_rerank.yaml --output reports/hybrid_rerank.json
-groundtruth compare reports/dense.json reports/hybrid_rerank.json
-```
-
-`ingest` accepts one `.pdf`, `.txt`, or `.md` file, or a directory of those files. PDF page numbers are preserved. Chunk size and overlap are word counts. Each corpus JSONL line contains `schema_version: "1.0"` and a `DocumentChunk`. Create output parent directories before running commands.
-
-## Retrieval Configurations
-
-`configs/dense.yaml` uses normalized MiniLM embeddings and cosine-equivalent dot product. `configs/bm25.yaml` uses lowercase regex word tokens. `configs/hybrid.yaml` combines Dense and BM25 rankings with Reciprocal Rank Fusion (RRF). `configs/hybrid_rerank.yaml` applies a CrossEncoder to a bounded hybrid candidate pool. The model package is installed with the `models` extra; normal tests use fakes and do not download models.
-
-Raw BM25 and cosine scores have different scales, so averaging them would make the blend arbitrary. RRF combines rank positions instead. See [retrieval design](docs/RETRIEVAL.md) for cache, candidate depth, and latency details.
-
-## Golden Dataset
-
-One UTF-8 JSON object per line. Required fields are `query_id` (unique non-empty string), `query` (non-empty string), and `relevant_chunk_ids` (non-empty array of unique chunk ID strings). Optional fields are `reference_answer` (string or null) and `tags` (array of unique strings). Blank lines and duplicate IDs are rejected.
-
-```json
-{"query_id":"q001","query":"Example question","relevant_chunk_ids":["doc1:p3:c2"],"tags":["definition"]}
-```
-
-Retrieval evaluation uses human relevance judgments and ordered chunk IDs. Generation evaluation remains a separate, unimplemented interface; no answer-quality claims are produced. `datasets/demo/` contains four synthetic chunks, three queries, and predetermined rankings for tests.
-
-**Keep chunking fixed across compared runs.** Changing chunk size or overlap changes chunk boundaries and IDs, invalidating current chunk-level relevance labels. Relabel or add source-span judgments before comparing different chunking strategies.
-
-## Creating a Golden Dataset
-
-1. Place the exact source PDF at `datasets/raw/osha3120.pdf`. Raw files are ignored by Git. Run `groundtruth prepare-osha` once to produce the local `datasets/osha/corpus.jsonl` with fixed 150-word chunks and 30-word overlap, plus `datasets/osha/corpus_manifest.json` with source and corpus hashes. The command refuses to replace an existing canonical corpus.
-2. Review or append answerable, unlabeled questions in `datasets/osha/questions_draft.jsonl`. Do not put `relevant_chunk_ids` in this file. The ten initial questions are prompts for human review, not labels.
-3. Run `groundtruth label --corpus datasets/osha/corpus.jsonl --questions datasets/osha/questions_draft.jsonl --output datasets/osha/eval.jsonl`. Candidate discovery unions Dense, BM25, and Hybrid results. Use `more`, `search <phrase>`, or `inspect <chunk ID>` to check source passages. Select one or several IDs and explicitly confirm each answer. Progress is saved beside the draft file and resumes after interruption.
-4. Review every draft question. Verify answerable questions; explicitly skip any question the corpus cannot answer. Skipped questions remain in review progress but are excluded from `eval.jsonl`. Run `groundtruth label-status --questions datasets/osha/questions_draft.jsonl --dataset datasets/osha/eval.jsonl`, then `groundtruth audit-dataset --corpus datasets/osha/corpus.jsonl --questions datasets/osha/questions_draft.jsonl --dataset datasets/osha/eval.jsonl`. Optional review copy: `groundtruth export-review --corpus datasets/osha/corpus.jsonl --dataset datasets/osha/eval.jsonl --output reports/tmp/osha-review.md`.
-5. After all drafts are reviewed, at least 25 answerable questions are explicitly verified, and audit passes, run `groundtruth benchmark-osha`. It evaluates Dense, BM25, Hybrid, and Hybrid + CrossEncoder on the same corpus and verified labels. Skipped questions do not contribute to retrieval or latency metrics; unanswerable-query evaluation is not supported. Run JSON, summary, and ranking-only error analysis go to `reports/benchmarks/osha/`.
-
-The OSHA corpus and labeling progress remain local. The final, audited 29-query benchmark dataset is versioned at `benchmarks/osha/eval.jsonl`; it contains no source passages. See [golden dataset guidance](docs/GOLDEN_DATASET.md).
-
-## OSHA Benchmark
-
-The OSHA benchmark uses 29 verified answerable queries; q013 was explicitly skipped and excluded from retrieval metrics. The raw PDF, canonical corpus, and full benchmark runs remain local artifacts. The final labels and review counts are committed under `benchmarks/osha/`. The versioned aggregate baseline is [baselines/osha/v1.json](baselines/osha/v1.json); [v1.query.json](baselines/osha/v1.query.json) contains text-free query ranks derived from the original local run files.
-
-## Reproducing the OSHA Benchmark
-
-```bash
-python -m pip install -e ".[dev,models]"
-groundtruth benchmark-setup osha
+groundtruth benchmark-setup osha --source path/to/osha3120.pdf
 groundtruth benchmark-status osha
 groundtruth benchmark-osha
-groundtruth regress --baseline baselines/osha/v1.json --query-baseline baselines/osha/v1.query.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest
 ```
 
-Use `groundtruth benchmark-setup osha --source path/to/osha3120.pdf` when the pinned PDF is already available. The raw OSHA PDF is not committed. Setup verifies its SHA-256 before ingestion, rebuilds the corpus with fixed 150/30 word chunks, then checks 1 document, 45 pages, 91 chunks, the corpus fingerprint, and the committed 29-query golden dataset. It reuses a valid existing corpus without overwriting it. A different source revision or corpus fingerprint stops reproduction. q013 remains a reviewed skip, not an EvalQuery. See [benchmark reproducibility](docs/BENCHMARK_REPRODUCIBILITY.md) for provenance and runtime caveats.
+`benchmark-setup` checks the PDF SHA-256 before creating or reusing the canonical corpus. Without `--source`, it attempts the official source; `--release-fallback` is available for the pinned release asset. The `benchmark-osha` command is the historical four-retriever benchmark using its fixed configs, **not** an automatic rerun of active v2. It loads models and writes local reports. The normal CI workflow does not run it; the [manual OSHA workflow](.github/workflows/osha-benchmark.yml) performs real benchmark reproduction. See [reproduction instructions](docs/BENCHMARK_REPRODUCIBILITY.md) before comparing new results.
 
-## Benchmark Results
-
-Full benchmark reports are local under `reports/benchmarks/osha/`; the committed baseline contains only aggregates and provenance, not source passages or golden labels.
-
-## Retrieval Regression Testing
-
-1. Run and audit a benchmark, then save its aggregate baseline: `groundtruth baseline-create --summary reports/benchmarks/osha/summary.json --output baselines/osha/v1.json --name osha-v1`. Existing baselines are protected; use `--force` only for an intentional replacement.
-2. Change the retrieval implementation or configuration, then run a new candidate benchmark with the same corpus, golden dataset, and required K values.
-3. Compare: `groundtruth regress --baseline baselines/osha/v1.json --candidate path/to/candidate/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest`.
-4. Optionally create a text-free query baseline from the original run files: `groundtruth query-baseline-create --summary reports/benchmarks/osha/summary.json --baseline baselines/osha/v1.json --output baselines/osha/v1.query.json`. This reads existing runs; it does not rerun retrieval.
-5. Add `--query-baseline baselines/osha/v1.query.json` to `regress` to see exact query changes. Inspect `regression.json` and `REGRESSION.md` for PASS/WARN/FAIL per metric and retriever, plus new failures, recoveries, and rank movement. FAIL exits nonzero; WARN exits zero unless `--fail-on-warn` is set.
-
-Comparison rejects incompatible corpus fingerprints, dataset hashes, query counts, retrievers, or required K values. The OSHA policy disables latency gating by default because timing depends on hardware and runtime conditions; measured latency remains visible in reports. See [regression guidance](docs/REGRESSION.md).
-
-## Retrieval Failure Forensics
-
-Regression identifies which queries changed. Forensics traces where a golden chunk was observed across retrieval stages, without guessing why a model ranked it that way. It reads existing run files; it does not rerun retrieval.
+<details>
+<summary>Inspect the evaluation and release workflows</summary>
 
 ```bash
-groundtruth analyze-failures --dense reports/benchmarks/osha/dense.json --bm25 reports/benchmarks/osha/bm25.json --hybrid reports/benchmarks/osha/hybrid.json --rerank reports/benchmarks/osha/hybrid_rerank.json --output reports/forensics/osha --target-k 3
-groundtruth failure-inspect reports/forensics/osha/forensics.json --query q019
+# Compare a compatible saved candidate summary with the original baseline.
+groundtruth regress --baseline baselines/osha/v1.json --query-baseline baselines/osha/v1.query.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha
+
+# Inspect the active version. Rollback is an explicit state-changing action.
+groundtruth config-status osha
+groundtruth promotion-rollback osha --to v1
 ```
 
-The JSON and Markdown reports contain relevant chunk IDs, ranks, scores, and classifications, but no source passages or query text. They stay local under `reports/forensics/`. Unknown ranks or pool membership mean the saved run depth cannot establish them.
+The regression example requires a fresh compatible `reports/benchmarks/osha/summary.json`; it does not create one. For labeling, forensics, experiments, robustness, and the complete promotion sequence, use the dedicated guides below rather than treating isolated commands as a release recipe.
 
-## Retrieval Experiments
+</details>
 
-Define numeric candidate overrides in [the OSHA experiment spec](experiments/osha/retrieval-v1.yaml), validate them without model loading, then run them against the fixed corpus and golden dataset:
+## Reproducibility and integrity
 
-```bash
-groundtruth experiment-run experiments/osha/retrieval-v1.yaml --output reports/experiments/osha/retrieval-v1 --dry-run
-groundtruth experiment-run experiments/osha/retrieval-v1.yaml --output reports/experiments/osha/retrieval-v1
-groundtruth experiment-inspect reports/experiments/osha/retrieval-v1/experiment.json --candidate hybrid-depth-30
-```
+The benchmark pins the source PDF hash, `pypdf` version, chunking parameters, corpus fingerprint, and golden dataset identity. Candidate configs, run IDs, and both aggregate and query-level baselines carry provenance through validation and activation. The pinned source SHA-256 is `3ea7380fa10860417ed30720eaf8beb7a85d106e3dafb97b880001df6552767b`; the corpus fingerprint is `55bebfded1835db967ef9fed5688ff0d8ad919a42c308cbc555972419df3531e`; the golden dataset SHA-256 is `78dd4d33573577c9ce5b285699afea6c91ad6bfcce2499f8a629960cb058f85e`. Raw source PDFs and the canonical corpus are local artifacts, while verified labels and baselines are versioned.
 
-The experiment compares each candidate with the matching v1 retriever, records query diagnostics, and reports Pareto and advisory promotion status. Four-stage forensics is marked unavailable when a candidate has only its own stage run. No command promotes a config, edits baselines or labels, or commits reports. See [experiment guidance](docs/EXPERIMENTS.md).
+| Area | Where to look |
+| --- | --- |
+| `src/groundtruth_rag/` | Ingestion, retrievers, evaluation, reporting, experiments, robustness, promotion, CLI |
+| `benchmarks/` | Fixed benchmark specification, golden dataset, regression policy |
+| `configs/`, `baselines/` | Retriever versions, active registry, aggregate and query baselines |
+| `experiments/`, `promotions/` | Candidate specifications and approved promotion manifest |
+| `tests/`, `.github/workflows/` | Offline tests, CI, and manual benchmark automation |
 
-## Continuous Integration
+## Documentation
 
-Pull requests and pushes to `main` run tests, Ruff, `compileall`, CLI smoke checks, `groundtruth benchmark-verify osha`, and a synthetic regression gate. The normal CI workflow uses `.[dev]`; it does **not** download the OSHA PDF or model weights. The synthetic PASS/WARN/FAIL fixtures exercise the regression engine, not real retrieval quality.
+[Architecture](docs/ARCHITECTURE.md) · [Retrieval](docs/RETRIEVAL.md) · [Golden dataset](docs/GOLDEN_DATASET.md) · [Regression](docs/REGRESSION.md) · [Benchmark reproducibility](docs/BENCHMARK_REPRODUCIBILITY.md) · [Experiments](docs/EXPERIMENTS.md) · [Robustness](docs/ROBUSTNESS.md) · [Promotion and rollback](docs/PROMOTION.md)
 
-The full OSHA benchmark runs only through the manual GitHub Actions workflow. It verifies the pinned public source, rebuilds the corpus, runs neural retrieval, and compares the result with baseline v1. It is manual because model downloads and benchmark execution take longer, OSHA hosting can be unavailable, and runner latency varies. If the official host is unavailable, the workflow tries the pinned GitHub Release asset and accepts it only when the PDF matches the same SHA-256. Reports are uploaded as artifacts; the raw PDF, generated corpus, and model files are not.
+**Scope boundary:** this project evaluates retrieval quality and release decisions. It does not evaluate generated answers or claim end-to-end RAG response quality.

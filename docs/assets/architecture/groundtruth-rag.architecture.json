@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Groundtruth-Rag",
+    "subtitle": "Evidence-led retrieval engineering",
+    "output": "groundtruth-rag.html",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow",
+    "animation": "none",
+    "repository": {
+      "url": "https://github.com/monicasenthil28/Groundtruth-Rag",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "eb743bbecdd739cfd08b4a5bd9ee74085611e26c"
+    },
+    "viewBox": [860, 1070]
+  },
+  "components": [
+    { "id": "source", "type": "external", "label": "Pinned OSHA PDF", "sublabel": "SHA-256 checked source", "pos": [60, 55], "size": [260, 84], "sources": [{"path": "src/groundtruth_rag/benchmark_setup.py", "line": 123}] },
+    { "id": "corpus", "type": "database", "label": "Canonical corpus", "sublabel": "Deterministic ingest + chunk IDs", "pos": [490, 55], "size": [300, 84], "sources": [{"path": "src/groundtruth_rag/ingestion/pipeline.py", "line": 19}] },
+    { "id": "golden", "type": "database", "label": "Golden dataset", "sublabel": "Human-verified relevance", "pos": [490, 235], "size": [300, 84], "sources": [{"path": "src/groundtruth_rag/labeling/session.py", "line": 104}, {"path": "src/groundtruth_rag/benchmark_setup.py", "line": 193}] },
+    { "id": "retrieval", "type": "backend", "label": "Retrieval strategies", "sublabel": "Dense / BM25 / RRF / rerank", "pos": [60, 235], "size": [260, 84], "sources": [{"path": "src/groundtruth_rag/retrieval/factory.py", "line": 64}] },
+    { "id": "evaluation", "type": "backend", "label": "Evaluation runner", "sublabel": "Ranking metrics + latency", "pos": [60, 415], "size": [260, 84], "sources": [{"path": "src/groundtruth_rag/evaluation/runner.py", "line": 67}] },
+    { "id": "regression", "type": "security", "label": "Regression gates", "sublabel": "Aggregate + query-level", "pos": [490, 415], "size": [300, 84], "sources": [{"path": "src/groundtruth_rag/reporting/regression.py", "line": 251}, {"path": "src/groundtruth_rag/reporting/query_regression.py", "line": 158}] },
+    { "id": "forensics", "type": "backend", "label": "Failure forensics", "sublabel": "Trace lost relevant chunks", "pos": [490, 595], "size": [300, 84], "sources": [{"path": "src/groundtruth_rag/reporting/forensics.py", "line": 145}] },
+    { "id": "experiments", "type": "backend", "label": "Experiments", "sublabel": "Candidate runs + Pareto analysis", "pos": [60, 595], "size": [260, 84], "sources": [{"path": "src/groundtruth_rag/experiments.py", "line": 220}, {"path": "src/groundtruth_rag/experiments.py", "line": 295}] },
+    { "id": "robustness", "type": "backend", "label": "Robustness checks", "sublabel": "Paired bootstrap + latency trials", "pos": [60, 775], "size": [260, 84], "sources": [{"path": "src/groundtruth_rag/robustness.py", "line": 90}, {"path": "src/groundtruth_rag/robustness.py", "line": 223}] },
+    { "id": "promotion", "type": "security", "label": "Human-gated promotion", "sublabel": "Approve / validate / baseline", "pos": [490, 775], "size": [300, 84], "sources": [{"path": "src/groundtruth_rag/promotion.py", "line": 271}, {"path": "src/groundtruth_rag/promotion.py", "line": 425}] },
+    { "id": "registry", "type": "database", "label": "Active retrieval registry", "sublabel": "v2 active / v1 rollback", "pos": [490, 955], "size": [300, 84], "sources": [{"path": "configs/versions/osha/registry.yaml", "line": 1}, {"path": "src/groundtruth_rag/promotion.py", "line": 544}] }
+  ],
+  "connections": [
+    {"from": "source", "to": "corpus"},
+    {"from": "corpus", "to": "golden"},
+    {"from": "golden", "to": "retrieval"},
+    {"from": "retrieval", "to": "evaluation"},
+    {"from": "evaluation", "to": "regression"},
+    {"from": "regression", "to": "forensics"},
+    {"from": "forensics", "to": "experiments"},
+    {"from": "experiments", "to": "robustness"},
+    {"from": "robustness", "to": "promotion"},
+    {"from": "promotion", "to": "registry"}
+  ]
+}
