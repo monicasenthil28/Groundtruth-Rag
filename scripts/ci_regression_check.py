@@ -12,6 +12,14 @@ OUTPUT = ROOT / "reports/ci"
 
 
 def main() -> int:
+    query_check = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "tests/test_query_regression.py"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    print(query_check.stdout, end="")
+    print(query_check.stderr, end="", file=sys.stderr)
+    if query_check.returncode:
+        raise RuntimeError("synthetic query regression checks failed")
     cases = (
         ("pass", "PASS", 0, False),
         ("warn", "WARN", 0, False),
@@ -19,7 +27,8 @@ def main() -> int:
         ("fail", "FAIL", 1, False),
     )
     lines = ["## Synthetic Regression Fixture Gate", "",
-             "These values are synthetic CLI checks, not OSHA benchmark evidence.", ""]
+             "These values are synthetic CLI checks, not OSHA benchmark evidence.",
+             "", "- query-level synthetic checks: PASS", ""]
     for name, expected_status, expected_code, strict in cases:
         candidate = "warn" if name == "warn_strict" else name
         directory = OUTPUT / name

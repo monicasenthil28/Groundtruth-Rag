@@ -33,6 +33,9 @@ from groundtruth_rag.reporting.regression import (
     compare as compare_regression, create_baseline, load_baseline, load_policy,
     load_summary, write_report,
 )
+from groundtruth_rag.reporting.query_regression import (
+    compare_queries, create_query_baseline, load_query_baseline,
+)
 from groundtruth_rag.retrieval.bm25 import BM25Retriever
 from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
@@ -408,6 +411,7 @@ def regress(
     policy: Path = typer.Option(..., "--policy"),
     output: Path = typer.Option(..., "--output"),
     fail_on_warn: bool = typer.Option(False, "--fail-on-warn"),
+    query_baseline: Path | None = typer.Option(None, "--query-baseline"),
 ) -> None:
     """Compare a candidate benchmark with a versioned baseline."""
     try:
@@ -415,6 +419,33 @@ def regress(
         current = load_summary(candidate)
         rules = load_policy(policy)
         report = compare_regression(base, current, rules)
+        if query_baseline is not None:
+            analysis = compare_queries(
+                load_query_baseline(query_baseline), base, candidate, current,
+                rules.retrievers, critical_k=rules.query_regression.critical_k,
+                warn_rank_drop=rules.query_regression.warn_rank_drop,
+            )
+            report["query_analysis"] = analysis
+            query_rules = rules.query_regression
+            if query_rules.enabled:
+                new_count = sum(len(data["new_failures"][str(k)])
+                                for data in analysis["retrievers"].values()
+                                for k in query_rules.critical_k)
+                severity = "PASS"
+                if ((query_rules.fail_on_new_failure_at_k and new_count > 0)
+                        or (query_rules.max_new_failures_fail is not None
+                            and new_count > query_rules.max_new_failures_fail)):
+                    severity = "FAIL"
+                elif ((query_rules.max_new_failures_warn is not None
+                       and new_count > query_rules.max_new_failures_warn)
+                      or any(row["severity"] == "WARN" for data in analysis["retrievers"].values()
+                             for row in data["queries"])):
+                    severity = "WARN"
+                report["query_gate_status"] = severity
+                if severity == "FAIL" or (severity == "WARN" and report["overall_status"] == "PASS"):
+                    report["overall_status"] = severity
+        elif rules.query_regression.enabled:
+            raise ValueError("query regression policy requires --query-baseline")
         report["candidate_summary"] = str(candidate)
         _, markdown_path = write_report(report, output)
     except (OSError, ValueError, ValidationError) as exc:
@@ -427,6 +458,24 @@ def regress(
     typer.echo(f"Overall: {report['overall_status']}; report: {markdown_path}")
     if report["overall_status"] == "FAIL" or (fail_on_warn and report["overall_status"] == "WARN"):
         raise typer.Exit(1)
+
+
+@app.command("query-baseline-create")
+def query_baseline_create(
+    summary: Path = typer.Option(..., "--summary"),
+    baseline: Path = typer.Option(..., "--baseline"),
+    output: Path = typer.Option(..., "--output"),
+    force: bool = typer.Option(False, "--force"),
+) -> None:
+    """Extract text-free query ranks from existing benchmark runs."""
+    try:
+        if output.resolve() in {summary.resolve(), baseline.resolve()}:
+            raise ValueError("query baseline output must differ from inputs")
+        result = create_query_baseline(summary, load_baseline(baseline), output, force=force)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Query baseline creation failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Query baseline: {output}; queries: {result.query_count}")
 
 
 @app.command("evaluate-demo")

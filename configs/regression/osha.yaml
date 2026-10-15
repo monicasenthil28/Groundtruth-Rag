@@ -20,3 +20,7 @@ latency:
     warn_increase_pct: 25
     fail_increase_pct: 50
 per_retriever: {}
+query_regression:
+  enabled: false
+  critical_k: [3]
+  warn_rank_drop: 3

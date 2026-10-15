@@ -46,7 +46,7 @@ jobs:
           FAIL_ON_WARN: ${{ inputs.fail_on_warn }}
         shell: bash
         run: |
-          args=(--baseline baselines/osha/v1.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest)
+          args=(--baseline baselines/osha/v1.json --query-baseline baselines/osha/v1.query.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest)
           if [ "$FAIL_ON_WARN" = true ]; then
             args+=(--fail-on-warn)
           fi

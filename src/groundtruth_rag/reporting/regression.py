@@ -96,10 +96,29 @@ class RetrieverRules(StrictModel):
     latency: dict[str, MetricRule] = Field(default_factory=dict)
 
 
+class QueryRegressionPolicy(StrictModel):
+    enabled: bool = False
+    critical_k: list[int] = Field(default_factory=list)
+    fail_on_new_failure_at_k: bool = False
+    warn_rank_drop: int | None = Field(default=None, ge=1)
+    max_new_failures_warn: int | None = Field(default=None, ge=0)
+    max_new_failures_fail: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def valid_thresholds(self) -> "QueryRegressionPolicy":
+        if len(set(self.critical_k)) != len(self.critical_k) or any(k <= 0 for k in self.critical_k):
+            raise ValueError("critical K values must be unique and positive")
+        if (self.max_new_failures_warn is not None and self.max_new_failures_fail is not None
+                and self.max_new_failures_fail < self.max_new_failures_warn):
+            raise ValueError("failure tolerance must be at least warning tolerance")
+        return self
+
+
 class RegressionPolicy(RetrieverRules):
     schema_version: Literal["1.0"] = "1.0"
     retrievers: list[str]
     per_retriever: dict[str, RetrieverRules] = Field(default_factory=dict)
+    query_regression: QueryRegressionPolicy = Field(default_factory=QueryRegressionPolicy)
 
     @model_validator(mode="after")
     def valid_policy(self) -> "RegressionPolicy":
@@ -343,6 +362,36 @@ def render_markdown(report: dict) -> str:
         if not selected:
             lines.append("None.")
         lines.append("")
+    analysis = report.get("query_analysis")
+    if analysis and analysis["enabled"]:
+        lines.extend(["## Query-Level Changes", ""])
+        lines.append(f"Query gate: {report.get('query_gate_status', 'disabled')}")
+        lines.append("")
+        for name, data in analysis["retrievers"].items():
+            lines.extend([f"### {name}", "",
+                          f"- New failures: {sum(map(len, data['new_failures'].values()))} across K values",
+                          f"- Recoveries: {sum(map(len, data['recoveries'].values()))} across K values",
+                          f"- Rank improved: {len(data['rank_improvements'])}",
+                          f"- Rank regressed: {len(data['rank_regressions'])}", ""])
+        for heading, prefix in (("New Failures", "NEW_FAILURE_AT_"),
+                                ("Recoveries", "RECOVERED_AT_"),
+                                ("Rank Regressions", "RANK_REGRESSED"),
+                                ("Rank Improvements", "RANK_IMPROVED"),
+                                ("Persistent Failures", "STILL_FAILED_AT_K")):
+            lines.extend([f"### {heading}", "",
+                          "| Retriever | Query | K | Baseline Rank | Candidate Rank |",
+                          "| --- | --- | ---: | ---: | ---: |"])
+            for name, data in analysis["retrievers"].items():
+                for row in data["queries"]:
+                    for flag in row["flags"]:
+                        if flag.startswith(prefix):
+                            k = flag[len(prefix):] if prefix.endswith("_") else "-"
+                            old = row["baseline_first_relevant_rank"]
+                            new = row["candidate_first_relevant_rank"]
+                            lines.append(f"| {name} | {row['query_id']} | {k} | "
+                                         f"{old if old is not None else '-'} | "
+                                         f"{new if new is not None else '-'} |")
+            lines.append("")
     lines.extend(["## Compatibility Checks", ""])
     lines.extend(f"- {check}" for check in report["compatibility_checks"])
     return "\n".join(lines) + "\n"

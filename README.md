@@ -78,7 +78,7 @@ The OSHA corpus and labeling progress remain local. The final, audited 29-query 
 
 ## OSHA Benchmark
 
-The OSHA benchmark uses 29 verified answerable queries; q013 was explicitly skipped and excluded from retrieval metrics. The raw PDF, canonical corpus, and full benchmark runs remain local artifacts. The final labels and review counts are committed under `benchmarks/osha/`. The versioned aggregate baseline is [baselines/osha/v1.json](baselines/osha/v1.json).
+The OSHA benchmark uses 29 verified answerable queries; q013 was explicitly skipped and excluded from retrieval metrics. The raw PDF, canonical corpus, and full benchmark runs remain local artifacts. The final labels and review counts are committed under `benchmarks/osha/`. The versioned aggregate baseline is [baselines/osha/v1.json](baselines/osha/v1.json); [v1.query.json](baselines/osha/v1.query.json) contains text-free query ranks derived from the original local run files.
 
 ## Reproducing the OSHA Benchmark
 
@@ -87,7 +87,7 @@ python -m pip install -e ".[dev,models]"
 groundtruth benchmark-setup osha
 groundtruth benchmark-status osha
 groundtruth benchmark-osha
-groundtruth regress --baseline baselines/osha/v1.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest
+groundtruth regress --baseline baselines/osha/v1.json --query-baseline baselines/osha/v1.query.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest
 ```
 
 Use `groundtruth benchmark-setup osha --source path/to/osha3120.pdf` when the pinned PDF is already available. The raw OSHA PDF is not committed. Setup verifies its SHA-256 before ingestion, rebuilds the corpus with fixed 150/30 word chunks, then checks 1 document, 45 pages, 91 chunks, the corpus fingerprint, and the committed 29-query golden dataset. It reuses a valid existing corpus without overwriting it. A different source revision or corpus fingerprint stops reproduction. q013 remains a reviewed skip, not an EvalQuery. See [benchmark reproducibility](docs/BENCHMARK_REPRODUCIBILITY.md) for provenance and runtime caveats.
@@ -101,7 +101,8 @@ Full benchmark reports are local under `reports/benchmarks/osha/`; the committed
 1. Run and audit a benchmark, then save its aggregate baseline: `groundtruth baseline-create --summary reports/benchmarks/osha/summary.json --output baselines/osha/v1.json --name osha-v1`. Existing baselines are protected; use `--force` only for an intentional replacement.
 2. Change the retrieval implementation or configuration, then run a new candidate benchmark with the same corpus, golden dataset, and required K values.
 3. Compare: `groundtruth regress --baseline baselines/osha/v1.json --candidate path/to/candidate/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest`.
-4. Inspect `regression.json` and `REGRESSION.md` for PASS/WARN/FAIL per metric and retriever. FAIL exits nonzero; WARN exits zero unless `--fail-on-warn` is set.
+4. Optionally create a text-free query baseline from the original run files: `groundtruth query-baseline-create --summary reports/benchmarks/osha/summary.json --baseline baselines/osha/v1.json --output baselines/osha/v1.query.json`. This reads existing runs; it does not rerun retrieval.
+5. Add `--query-baseline baselines/osha/v1.query.json` to `regress` to see exact query changes. Inspect `regression.json` and `REGRESSION.md` for PASS/WARN/FAIL per metric and retriever, plus new failures, recoveries, and rank movement. FAIL exits nonzero; WARN exits zero unless `--fail-on-warn` is set.
 
 Comparison rejects incompatible corpus fingerprints, dataset hashes, query counts, retrievers, or required K values. The OSHA policy disables latency gating by default because timing depends on hardware and runtime conditions; measured latency remains visible in reports. See [regression guidance](docs/REGRESSION.md).
 
