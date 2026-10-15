@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Literal
 from urllib.request import urlopen
 
 import yaml
+import pypdf
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from groundtruth_rag.datasets import load_dataset
@@ -203,7 +205,7 @@ def setup_benchmark(root: Path, spec: BenchmarkSpec, supplied_source: Path | Non
     source, corpus, manifest = benchmark_paths(root)
     if supplied_source is not None:
         _check_source(supplied_source, spec)
-    if source.exists():
+    if source.exists() and (supplied_source is None or file_sha256(source) == spec.source.sha256):
         _check_source(source, spec)
     else:
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -231,6 +233,21 @@ def setup_benchmark(root: Path, spec: BenchmarkSpec, supplied_source: Path | Non
                          spec.corpus.chunk_overlap_words)
         chunks = load_corpus(temp_corpus)
         fingerprint = corpus_fingerprint(chunks)
+        if fingerprint != spec.corpus.fingerprint:
+            raise ValueError(
+                "corpus fingerprint mismatch: BENCHMARK REPRODUCTION FAILED\n"
+                f"source_sha256: {file_sha256(source)}\n"
+                f"canonical_source: {source.relative_to(root).as_posix()}\n"
+                f"python: {sys.version.split()[0]}\n"
+                f"pypdf: {pypdf.__version__}\n"
+                f"documents: {summary.documents}\n"
+                f"pages: {summary.pages}\n"
+                f"chunks: {summary.chunks}\n"
+                f"expected_fingerprint: {spec.corpus.fingerprint}\n"
+                f"actual_fingerprint: {fingerprint}\n"
+                f"first_document_id: {chunks[0].document_id}\n"
+                f"first_chunk_id: {chunks[0].chunk_id}"
+            )
         for label, actual, expected in (
             ("documents", summary.documents, spec.source.document_count),
             ("pages", summary.pages, spec.source.page_count),

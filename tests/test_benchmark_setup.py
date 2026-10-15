@@ -128,6 +128,34 @@ def test_source_copy_hash_and_reuse(package):
     assert benchmark_status(root, spec)["ready"]
 
 
+def test_acquisition_path_does_not_change_corpus(package, tmp_path: Path):
+    root, source, _, path = package
+    spec = load_spec(path)
+    alternate = tmp_path / "other" / "osha3120.pdf"
+    alternate.parent.mkdir()
+    shutil.copyfile(source, alternate)
+    assert setup_benchmark(root, spec, alternate)
+    canonical, corpus, _ = benchmark_paths(root)
+    chunks = load_corpus(corpus)
+    assert canonical.read_bytes() == source.read_bytes()
+    assert all(chunk.source == "osha3120.pdf" for chunk in chunks)
+    assert {chunk.document_id for chunk in chunks} == {chunks[0].document_id}
+    assert corpus_fingerprint(chunks) == spec.corpus.fingerprint
+
+
+def test_invalid_canonical_replaced_only_by_verified_source(package):
+    root, source, _, path = package
+    spec = load_spec(path)
+    canonical = benchmark_paths(root)[0]
+    canonical.parent.mkdir(parents=True)
+    canonical.write_bytes(b"invalid")
+    with pytest.raises(SourceHashMismatchError):
+        setup_benchmark(root, spec)
+    assert canonical.read_bytes() == b"invalid"
+    assert setup_benchmark(root, spec, source)
+    assert canonical.read_bytes() == source.read_bytes()
+
+
 def test_mock_download(package):
     root, source, _, path = package
     spec = load_spec(path)
