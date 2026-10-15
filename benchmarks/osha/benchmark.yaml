@@ -1,0 +1,27 @@
+schema_version: "1.0"
+benchmark_id: osha
+title: OSHA 3120 Lockout/Tagout
+source:
+  document: osha3120.pdf
+  url: https://www.osha.gov/sites/default/files/publications/osha3120.pdf
+  sha256: 3ea7380fa10860417ed30720eaf8beb7a85d106e3dafb97b880001df6552767b
+  document_count: 1
+  page_count: 45
+corpus:
+  chunk_size_words: 150
+  chunk_overlap_words: 30
+  chunk_count: 91
+  fingerprint: 55bebfded1835db967ef9fed5688ff0d8ad919a42c308cbc555972419df3531e
+golden:
+  dataset: benchmarks/osha/eval.jsonl
+  review_manifest: benchmarks/osha/review_manifest.json
+  total_questions: 30
+  verified_queries: 29
+  skipped_ids: [q013]
+k_values: [1, 3, 5, 10]
+retriever_configs:
+  dense: configs/dense.yaml
+  bm25: configs/bm25.yaml
+  hybrid: configs/hybrid.yaml
+  hybrid_rerank: configs/hybrid_rerank.yaml
+baseline: baselines/osha/v1.json

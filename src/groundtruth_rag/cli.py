@@ -10,6 +10,10 @@ from rich.console import Console
 from rich.table import Table
 
 from groundtruth_rag import __version__
+from groundtruth_rag.benchmark_setup import (
+    benchmark_status as inspect_benchmark, load_spec, setup_benchmark,
+    validate_golden,
+)
 from groundtruth_rag.datasets import DatasetValidationError, load_dataset, tag_counts
 from groundtruth_rag.evaluation.runner import BenchmarkRun, evaluate_retriever
 from groundtruth_rag.ingestion.corpus import load_corpus
@@ -240,17 +244,26 @@ def export_review(
 @app.command("benchmark-osha")
 def benchmark_osha(
     corpus: Path = typer.Option(Path("datasets/osha/corpus.jsonl"), "--corpus"),
-    questions: Path = typer.Option(Path("datasets/osha/questions_draft.jsonl"), "--questions"),
-    dataset: Path = typer.Option(Path("datasets/osha/eval.jsonl"), "--dataset"),
+    questions: Path | None = typer.Option(None, "--questions"),
+    dataset: Path = typer.Option(Path("benchmarks/osha/eval.jsonl"), "--dataset"),
     manifest: Path = typer.Option(Path("datasets/osha/corpus_manifest.json"), "--manifest"),
     output_dir: Path = typer.Option(Path("reports/benchmarks/osha"), "--output-dir"),
 ) -> None:
     """Run four retrievers only after the human golden dataset passes audit."""
     try:
-        report = run_audit(corpus, questions, dataset, manifest)
-        if not report.passed:
-            raise ValueError("audit failed: " + "; ".join(report.errors))
-        if report.benchmark_query_count < MIN_OSHA_BENCHMARK_QUERIES:
+        root = Path(__file__).resolve().parents[2]
+        spec = load_spec(root / "benchmarks/osha/benchmark.yaml")
+        if questions is not None:
+            report = run_audit(corpus, questions, dataset, manifest)
+            if not report.passed:
+                raise ValueError("audit failed: " + "; ".join(report.errors))
+            verified_count = report.verified_count
+        else:
+            status = inspect_benchmark(root, spec)
+            if not status["ready"]:
+                raise ValueError("benchmark preparation failed: " + "; ".join(status["errors"]))
+            verified_count = validate_golden(root, spec, corpus)
+        if verified_count < MIN_OSHA_BENCHMARK_QUERIES:
             raise ValueError("first benchmark requires at least 25 human-verified answerable questions")
         chunks = load_corpus(corpus)
         queries = load_dataset(dataset)
@@ -261,9 +274,8 @@ def benchmark_osha(
             raise ValueError("benchmark requires the canonical OSHA PDF manifest and 150/30 chunking")
         fingerprint = corpus_fingerprint(chunks)
         runs: dict[str, BenchmarkRun] = {}
-        root = Path(__file__).resolve().parents[2]
         for name in ("dense", "bm25", "hybrid", "hybrid_rerank"):
-            config_path = root / "configs" / f"{name}.yaml"
+            config_path = root / spec.retriever_configs[name]
             run_config = load_config(config_path)
             retriever = build_retriever(run_config)
             retriever.index(chunks)
@@ -274,6 +286,8 @@ def benchmark_osha(
                                "dataset_sha256": file_sha256(dataset),
                                "config_sha256": file_sha256(config_path),
                                "source_sha256": provenance.source_sha256,
+                               "benchmark_id": spec.benchmark_id,
+                               "benchmark_spec_version": spec.schema_version,
                                "package_version": __version__, "python_version": sys.version.split()[0]},
             )
         summary, markdown, analysis = summarize_runs(runs)
@@ -286,7 +300,50 @@ def benchmark_osha(
     except (OSError, ValueError, RuntimeError, ValidationError) as exc:
         typer.echo(f"Benchmark blocked or failed: {exc}", err=True)
         raise typer.Exit(1) from exc
-    typer.echo(f"Benchmark results: {output_dir}; verified questions: {report.verified_count}")
+    typer.echo(f"Benchmark results: {output_dir}; verified questions: {verified_count}")
+
+
+@app.command("benchmark-setup")
+def benchmark_setup_command(
+    benchmark_id: str,
+    source: Path | None = typer.Option(None, "--source"),
+) -> None:
+    """Acquire the pinned public source and rebuild the canonical corpus."""
+    if benchmark_id != "osha":
+        raise typer.BadParameter("only osha is supported")
+    root = Path(__file__).resolve().parents[2]
+    try:
+        spec = load_spec(root / "benchmarks/osha/benchmark.yaml")
+        built = setup_benchmark(root, spec, source)
+    except (OSError, ValueError, RuntimeError, ValidationError) as exc:
+        typer.echo(f"BENCHMARK REPRODUCTION FAILED: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo("OSHA benchmark ready; corpus " + ("rebuilt" if built else "reused"))
+
+
+@app.command("benchmark-status")
+def benchmark_status_command(benchmark_id: str) -> None:
+    """Show source, corpus, golden dataset, and baseline readiness."""
+    if benchmark_id != "osha":
+        raise typer.BadParameter("only osha is supported")
+    root = Path(__file__).resolve().parents[2]
+    try:
+        spec = load_spec(root / "benchmarks/osha/benchmark.yaml")
+        status = inspect_benchmark(root, spec)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Benchmark status failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo("OSHA Benchmark")
+    typer.echo(f"Source: {status['source']} (SHA-256: {spec.source.sha256})")
+    typer.echo(f"Corpus: {status['corpus']} (documents: {spec.source.document_count}; "
+               f"pages: {spec.source.page_count}; chunks: {spec.corpus.chunk_count})")
+    typer.echo(f"Golden dataset: {status['golden']} (reviewed: {spec.golden.total_questions}; "
+               f"verified: {spec.golden.verified_queries}; skipped: {len(spec.golden.skipped_ids)}; "
+               f"skipped IDs: {', '.join(spec.golden.skipped_ids)})")
+    typer.echo(f"Baseline: {status['baseline']} ({spec.baseline})")
+    for error in status["errors"]:
+        typer.echo(f"Mismatch: {error}", err=True)
+    typer.echo(f"Ready to benchmark: {'YES' if status['ready'] else 'NO'}")
 
 
 @app.command("baseline-create")

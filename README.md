@@ -74,11 +74,23 @@ Retrieval evaluation uses human relevance judgments and ordered chunk IDs. Gener
 4. Review every draft question. Verify answerable questions; explicitly skip any question the corpus cannot answer. Skipped questions remain in review progress but are excluded from `eval.jsonl`. Run `groundtruth label-status --questions datasets/osha/questions_draft.jsonl --dataset datasets/osha/eval.jsonl`, then `groundtruth audit-dataset --corpus datasets/osha/corpus.jsonl --questions datasets/osha/questions_draft.jsonl --dataset datasets/osha/eval.jsonl`. Optional review copy: `groundtruth export-review --corpus datasets/osha/corpus.jsonl --dataset datasets/osha/eval.jsonl --output reports/tmp/osha-review.md`.
 5. After all drafts are reviewed, at least 25 answerable questions are explicitly verified, and audit passes, run `groundtruth benchmark-osha`. It evaluates Dense, BM25, Hybrid, and Hybrid + CrossEncoder on the same corpus and verified labels. Skipped questions do not contribute to retrieval or latency metrics; unanswerable-query evaluation is not supported. Run JSON, summary, and ranking-only error analysis go to `reports/benchmarks/osha/`.
 
-The OSHA corpus and in-progress/final local labels are ignored to keep source text and unfinished work out of tooling commits. A later, separate data commit may include human-verified labels after review. See [golden dataset guidance](docs/GOLDEN_DATASET.md).
+The OSHA corpus and labeling progress remain local. The final, audited 29-query benchmark dataset is versioned at `benchmarks/osha/eval.jsonl`; it contains no source passages. See [golden dataset guidance](docs/GOLDEN_DATASET.md).
 
 ## OSHA Benchmark
 
-The local OSHA benchmark uses 29 verified answerable queries; q013 was explicitly skipped and excluded from retrieval metrics. The raw PDF, canonical corpus, golden labels, and full benchmark runs remain local artifacts. The versioned aggregate baseline is [baselines/osha/v1.json](baselines/osha/v1.json).
+The OSHA benchmark uses 29 verified answerable queries; q013 was explicitly skipped and excluded from retrieval metrics. The raw PDF, canonical corpus, and full benchmark runs remain local artifacts. The final labels and review counts are committed under `benchmarks/osha/`. The versioned aggregate baseline is [baselines/osha/v1.json](baselines/osha/v1.json).
+
+## Reproducing the OSHA Benchmark
+
+```bash
+python -m pip install -e ".[dev,models]"
+groundtruth benchmark-setup osha
+groundtruth benchmark-status osha
+groundtruth benchmark-osha
+groundtruth regress --baseline baselines/osha/v1.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest
+```
+
+Use `groundtruth benchmark-setup osha --source path/to/osha3120.pdf` when the pinned PDF is already available. The raw OSHA PDF is not committed. Setup verifies its SHA-256 before ingestion, rebuilds the corpus with fixed 150/30 word chunks, then checks 1 document, 45 pages, 91 chunks, the corpus fingerprint, and the committed 29-query golden dataset. It reuses a valid existing corpus without overwriting it. A different source revision or corpus fingerprint stops reproduction. q013 remains a reviewed skip, not an EvalQuery. See [benchmark reproducibility](docs/BENCHMARK_REPRODUCIBILITY.md) for provenance and runtime caveats.
 
 ## Benchmark Results
 

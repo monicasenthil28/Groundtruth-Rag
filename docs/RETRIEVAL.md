@@ -30,4 +30,4 @@ Larger candidate depths can improve recall before fusion or reranking, while inc
 
 ## Golden Label Constraint
 
-The current golden format names relevant chunk IDs. Changing chunk size or overlap changes chunk boundaries and IDs, so comparisons must keep chunking fixed. Cross-chunking studies require relabeling or future source-span judgments. No OSHA labels or benchmark results are included in this phase.
+The current golden format names relevant chunk IDs. Changing chunk size or overlap changes chunk boundaries and IDs, so comparisons must keep chunking fixed. Cross-chunking studies require relabeling or future source-span judgments. The final OSHA labels are versioned separately from the raw PDF and generated corpus.

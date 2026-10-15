@@ -14,7 +14,7 @@ The labeling view unions Dense top 10, BM25 top 10, and Hybrid top 10 by default
 
 ## Progress And Audit
 
-The ten seed questions in `datasets/osha/questions_draft.jsonl` are unlabeled. Append further answerable questions to reach a first benchmark of at least 25; existing questions must retain their IDs and text after labeling starts. Review state is written atomically to `questions_draft.progress.json` after each edit, skip, and confirmation. Verified records are exported to `eval.jsonl`. Editing a verified record requires an explicit prompt and another confirmation. If output differs from progress after an interruption, inspect both and use `--reconcile-output` only after confirming that progress is authoritative.
+The 30 draft questions in `datasets/osha/questions_draft.jsonl` remain unlabeled prompts. Review state was written atomically to `questions_draft.progress.json` after each edit, skip, and confirmation. The 29 final verified records were audited and copied byte-for-byte to `benchmarks/osha/eval.jsonl`; q013 was skipped. For future review changes, editing a verified record requires an explicit prompt and another confirmation. If output differs from progress after an interruption, inspect both and use `--reconcile-output` only after confirming that progress is authoritative.
 
 Every draft question must receive human review. Answerable questions are verified; a genuinely unanswerable question may be explicitly skipped. A review is complete when every draft is verified or skipped, with none unlabeled or in progress. `label-status` reports reviewed completion separately from verified-answerable coverage.
 
@@ -22,7 +22,7 @@ Every draft question must receive human review. Answerable questions are verifie
 
 ## Fixed Corpus And Reproducibility
 
-Place the exact OSHA 3120 PDF at `datasets/raw/osha3120.pdf`. `prepare-osha` ingests it once with 150-word chunks and 30-word overlap, records source SHA-256 and corpus fingerprint in `datasets/osha/corpus_manifest.json`, and refuses to regenerate an existing corpus. The raw PDF and text-bearing corpus remain outside Git. All four benchmark configurations use the same corpus, golden labels, and K values. Run JSON records config, dataset and source hashes, package/Python versions, timestamp, and corpus fingerprint.
+`groundtruth benchmark-setup osha` acquires or accepts the pinned OSHA 3120 PDF, verifies its SHA-256, and builds the 150/30-word corpus only when needed. It records source and corpus hashes in `datasets/osha/corpus_manifest.json`. The raw PDF and text-bearing corpus remain outside Git. All four benchmark configurations use the committed labels and K values. Run JSON records config, dataset and source hashes, benchmark spec version, package/Python versions, timestamp, and corpus fingerprint.
 
 Chunk-level IDs depend on boundaries. Changing chunk size or overlap invalidates labels. A future cross-chunking benchmark needs relabeling or source-span relevance judgments. No unanswerable-query metrics or generation evaluation are included here.
 Skipped queries do not contribute to Recall, Precision, Hit Rate, MRR, nDCG, or latency aggregates.

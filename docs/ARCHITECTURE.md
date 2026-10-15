@@ -3,20 +3,25 @@
 RAG teams frequently change chunking, embeddings, retrieval methods, and rerankers without knowing whether retrieval quality improved. Groundtruth-Rag runs repeatable evaluations against a human-verified golden dataset. The framework is domain agnostic; the OSHA Lockout/Tagout corpus is the first local benchmark, not embedded in the core.
 
 ```text
-Document Corpus -> Chunking -> Human Golden Labels
-                                  |
-                                  v
-                          Benchmark Runner
-                                  |
-                                  v
-                       Versioned Baseline
-                                  |
-                       Candidate Benchmark
-                                  |
-                       Regression Policy
-                                  |
-                                  v
-                          PASS / WARN / FAIL
+Public Source
+      |
+      v
+SHA-256 Verification
+      |
+      v
+Deterministic Corpus Build
+      |
+      v
+Committed Golden Labels
+      |
+      v
+Benchmark Runner
+      |
+      v
+Baseline / Regression Policy
+      |
+      v
+PASS / WARN / FAIL
 ```
 
 ## Responsibilities
@@ -29,7 +34,7 @@ Document Corpus -> Chunking -> Human Golden Labels
 - **Reporting:** The runner emits versioned JSON with per-query hits, metrics, latency, and run configuration. The aggregate baseline contains no source text or relevance labels. Regression reports contain metric deltas, compatibility checks, and PASS/WARN/FAIL decisions.
 - **Regression testing:** Compare a candidate summary to a versioned baseline after corpus, dataset, query-count, retriever, metric, and K compatibility checks. Quality uses absolute-drop thresholds; latency uses independently configurable relative-increase thresholds. No composite score is used.
 
-The CLI provides `--help`, `version`, `ingest`, `prepare-osha`, `label`, `label-status`, `audit-dataset`, `export-review`, `benchmark-osha`, `baseline-create`, `regress`, `validate-dataset`, `evaluate`, `evaluate-demo`, and `compare`. `benchmark-osha` refuses to run until audit passes and at least 25 questions are human verified. `evaluate-demo` uses fixed synthetic rankings only. Generation evaluation remains future work.
+The CLI provides `--help`, `version`, `ingest`, `prepare-osha`, `label`, `label-status`, `audit-dataset`, `export-review`, `benchmark-setup`, `benchmark-status`, `benchmark-osha`, `baseline-create`, `regress`, `validate-dataset`, `evaluate`, `evaluate-demo`, and `compare`. `benchmark-osha` refuses to run until the pinned source, corpus, committed golden dataset, and baseline are compatible. The older `--questions` path still audits local review progress when explicitly supplied. `evaluate-demo` uses fixed synthetic rankings only. Generation evaluation remains future work.
 
 Golden queries are stored as JSONL, one `EvalQuery` per line. Raw records are checked before Pydantic converts relevance IDs to a set, so duplicate IDs cannot disappear during parsing. The demo corpus and rankings exist solely to exercise the engine offline. `schema_version` in run JSON makes future format migration explicit.
 

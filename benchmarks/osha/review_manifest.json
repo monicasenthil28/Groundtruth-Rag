@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "total_questions": 30,
+  "verified": 29,
+  "skipped": 1,
+  "skipped_ids": ["q013"],
+  "corpus_fingerprint": "55bebfded1835db967ef9fed5688ff0d8ad919a42c308cbc555972419df3531e",
+  "dataset_sha256": "78dd4d33573577c9ce5b285699afea6c91ad6bfcce2499f8a629960cb058f85e"
+}

@@ -1,0 +1,13 @@
+# OSHA Benchmark Reproducibility
+
+The versioned specification is `benchmarks/osha/benchmark.yaml`. Its public source is OSHA Publication 3120 (2002 revised), downloaded from `https://www.osha.gov/sites/default/files/publications/osha3120.pdf`. The pinned PDF SHA-256 is `3ea7380fa10860417ed30720eaf8beb7a85d106e3dafb97b880001df6552767b`. A changed OSHA-hosted file fails verification rather than silently becoming a new benchmark. Offline users can supply the exact file with `--source`.
+
+The official host returned HTTP 403 from this development environment during Phase 06 verification. Automatic download is implemented and unit-tested with a mocked response, but live acquisition could not be confirmed here. The hash-verified `--source` path was tested against the local PDF in a temporary clean-room build.
+
+The existing ingestion algorithm uses 150-word chunks with 30-word overlap. The expected output is one document, 45 PDF pages, 91 chunks, and corpus fingerprint `55bebfded1835db967ef9fed5688ff0d8ad919a42c308cbc555972419df3531e`. One PDF page has no extracted chunks, so page count comes from ingestion and is recorded in the manifest; the corpus fingerprint and chunk count are checked from the generated corpus. The source PDF and corpus text remain ignored local files.
+
+The committed `benchmarks/osha/eval.jsonl` is a byte-identical copy of the locally audited human labels, with SHA-256 `78dd4d33573577c9ce5b285699afea6c91ad6bfcce2499f8a629960cb058f85e`. It has 29 verified answerable queries. `benchmarks/osha/review_manifest.json` preserves 30 reviewed questions and q013 as the sole skip; skipped questions have no EvalQuery and contribute no retrieval metrics. Setup verifies the dataset hash, reference answers, tags, chunk IDs, and compatibility with unchanged `baselines/osha/v1.json`. The private interactive review progress is not needed in a clean clone.
+
+From a clean clone, install with `python -m pip install -e ".[dev,models]"`, run `groundtruth benchmark-setup osha`, then `groundtruth benchmark-status osha`. Only after status says ready, run `groundtruth benchmark-osha` and compare with `groundtruth regress --baseline baselines/osha/v1.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest`.
+
+The local clean-room test rebuilds source and corpus in a temporary directory without changing the developer's canonical files. No second retrieval benchmark is implied by setup or status. A later benchmark may differ across model package versions, model weights, hardware, and runtime details; p95 latency is especially environment-sensitive and is not gated by the default OSHA regression policy. No CI or generation evaluation is included.
