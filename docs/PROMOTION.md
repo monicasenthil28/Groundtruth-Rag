@@ -1,0 +1,19 @@
+# Versioned Retrieval Promotion
+
+The Phase 10 `PROMOTE_CANDIDATE` label is advisory. It does not approve, stage, baseline, activate, or deploy a retriever. A promotion manifest (`schema_version: "1.0"`) identifies the experiment, candidate, exact resolved config hash, saved regression and robustness artifacts, approval state, and distinct v2 targets. The registry at `configs/versions/osha/registry.yaml` selects the active version. `configs/hybrid_rerank.yaml` remains the original v1 config; it is never rewritten as an alias. Both v1 baselines remain immutable for comparison and rollback.
+
+## Current Stop Point
+
+`promotions/osha/v2.yaml` names `rerank-pool-30`. `groundtruth promotion-check promotions/osha/v2.yaml` verifies the fixed experiment, resolved hash, saved run and summary, PASS regression, advisory decision, robustness identities, corpus/dataset hashes, query count, 150/30 chunking, and reviewed q013/q019 status. The manifest is `READY_FOR_HUMAN_APPROVAL`, with `approved: false`. This command does not stage or activate anything. Local experiment and robustness reports must be available for this precheck; a clean clone must first reproduce those evidence artifacts. `groundtruth config-status osha` reads only the registry and active files, without models.
+
+## Later Lifecycle
+
+1. A human explicitly runs `groundtruth promotion-approve promotions/osha/v2.yaml` and answers the default-no confirmation. `--reviewer` is optional and records only an explicitly supplied name; Git identity is not inferred. Approval alone does not stage or activate.
+2. `groundtruth promotion-apply promotions/osha/v2.yaml` writes `configs/versions/osha/hybrid_rerank_v2.yaml` from the validated resolved candidate object. The registry records v2 as `pending_validation` while `active: v1` remains. It refuses to overwrite an existing versioned config.
+3. `groundtruth benchmark-version osha v2` evaluates Dense, BM25, Hybrid, and the staged v2 Hybrid + CrossEncoder on the pinned source, fixed corpus and 29 golden queries. Model loading and the full real benchmark are required here, not in normal CI. Artifacts go under `reports/benchmarks/osha/v2/` and do not replace the v1 reports. A failure records `FAILED_VALIDATION` and leaves v1 active.
+4. `groundtruth promotion-validate promotions/osha/v2.yaml` compares the completed v2 run to v1 with aggregate regression and query diagnostics, performs four-stage forensics, and calculates paired robustness against the original v1 rerank run. Configured regression must PASS. Results are local under `reports/promotions/osha/v2/`; no composite score is invented.
+5. `groundtruth promotion-baseline promotions/osha/v2.yaml` generates `baselines/osha/v2.json` and `v2.query.json` from the actual validated run JSON and summary. It refuses to replace existing baselines. Provenance and all run IDs remain linked through the manifest, validation report, and registry.
+6. `groundtruth promotion-activate promotions/osha/v2.yaml` verifies approval, validation evidence, saved run IDs, and both new baseline files, then presents quality and environment-sensitive latency warnings and requires a second default-no confirmation. Only then does the registry change to `active: v2`.
+7. `groundtruth promotion-rollback osha --to v1` switches registry selection back to the preserved v1 config and baselines. It does not rerun retrieval or delete v2 artifacts.
+
+The states are `DRAFT`, `READY_FOR_HUMAN_APPROVAL`, `APPROVED`, `STAGED`, `VALIDATION_RUNNING`, `VALIDATED`, `BASELINED`, `ACTIVE`, `ROLLED_BACK`, and `FAILED_VALIDATION`. Invalid transitions are rejected; in particular, neither a draft nor an approved-but-unvalidated candidate can become active. Normal CI uses synthetic unit tests, not the OSHA PDF, model downloads, or real benchmark. Generated promotion reports contain evidence summaries and IDs, not source passages. No golden labels, chunking, or generation evaluation are changed.

@@ -20,3 +20,5 @@ groundtruth robustness-analyze --baseline-run reports/benchmarks/osha/hybrid_rer
 ```
 
 The optional `--latency` argument attaches a matching trial report to quality output without mixing their uncertainty estimates. Generated files stay local under `reports/robustness/` and are not committed. Phase 10 PASS/WARN/FAIL regression thresholds and PROMOTE_CANDIDATE/REVIEW/REJECT decisions remain independent and unchanged; a human reviews all evidence before promotion. No generation evaluation is included.
+
+The [promotion lifecycle](PROMOTION.md) records the observed robustness assessments as evidence, but does not treat `UNCHANGED` or `INCONCLUSIVE` as automatic approval. The activation prompt surfaces the saved latency measurement and its environment caveat.

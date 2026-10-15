@@ -13,3 +13,5 @@ Pareto comparison uses selected higher-is-better quality metrics and optionally 
 Chunk size and overlap are excluded because changing chunk IDs would invalidate the existing human relevance judgments. The framework does not search parameters, download arbitrary user-selected models, score generated answers, or claim statistical significance.
 
 Saved candidate runs may be compared to their original same-family benchmark runs with `groundtruth robustness-analyze`. This produces separate advisory quality evidence under `reports/robustness/`; it does not alter `experiment.json`, regression statuses, Pareto status, or promotion decisions. Optional `groundtruth latency-trials` measures repeated executions of one validated experiment candidate. See [robustness analysis](ROBUSTNESS.md).
+
+`PROMOTE_CANDIDATE` remains a review recommendation. It does not write a canonical config or make a version active. Versioned promotion uses a separate manifest, explicit human approval, isolated validation benchmark, generated baseline pair, and registry switch. See [promotion](PROMOTION.md).

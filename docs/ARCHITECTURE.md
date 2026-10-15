@@ -39,6 +39,8 @@ Golden Query -> Dense -----------\
 Benchmark -> Regression -> Changed Queries -> Failure Forensics -> Stage-Level Diagnosis
 
 Candidate Experiment -> Regression -> Query Diagnostics -> Forensics -> Paired Robustness Analysis -> Evidence Review -> Human Promotion Decision
+
+Experiment -> Candidate -> Regression -> Robustness -> Human Approval -> Staged v2 -> Validation Benchmark -> Baseline v2 -> Activate -> Rollback Available
 ```
 
 ## Responsibilities
@@ -58,6 +60,7 @@ Retrieval Change -> Experiment Candidates -> Fixed Benchmark -> Regression
 - **Regression testing:** Compare a candidate summary to a versioned baseline after corpus, dataset, query-count, retriever, metric, and K compatibility checks. Quality uses absolute-drop thresholds; latency uses independently configurable relative-increase thresholds. No composite score is used.
 - **Failure forensics:** Analyze four compatible saved runs to trace relevant chunk IDs through Dense, BM25, RRF, and CrossEncoder output. The report distinguishes observed rank movement from unknown ranks beyond saved depth and never infers model intent.
 - **Robustness:** Resample aligned queries from compatible saved baseline and candidate runs for descriptive quality intervals. Optional repeated full-query latency trials use a validated experiment candidate, with model indexing and warmup before measured trials. Neither changes regression or promotion decisions.
+- **Promotion:** A versioned manifest ties one resolved experiment candidate to saved regression and robustness evidence. Explicit human approval precedes staging; a separate fixed-corpus benchmark, v1 comparison, and newly generated v2 baseline pair precede activation. The registry selects active versions without rewriting the historic canonical v1 config or baseline. Rollback switches registry metadata only.
 
 The CLI provides `--help`, `version`, `ingest`, `prepare-osha`, `label`, `label-status`, `audit-dataset`, `export-review`, `benchmark-setup`, `benchmark-status`, `benchmark-verify`, `benchmark-osha`, `baseline-create`, `regress`, `validate-dataset`, `evaluate`, `evaluate-demo`, and `compare`. `benchmark-osha` refuses to run until the pinned source, corpus, committed golden dataset, and baseline are compatible. The older `--questions` path still audits local review progress when explicitly supplied. `evaluate-demo` uses fixed synthetic rankings only. Generation evaluation remains future work.
 

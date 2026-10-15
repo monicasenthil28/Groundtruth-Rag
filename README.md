@@ -22,6 +22,8 @@ See [architecture](docs/ARCHITECTURE.md) for the planned evaluation flow.
 
 Saved baseline and candidate runs can now be assessed with paired query bootstrap analysis; see [robustness](docs/ROBUSTNESS.md). This is advisory evidence, separate from regression policy and promotion decisions.
 
+Versioned candidate promotion is explicitly human-gated. The [OSHA v2 manifest](promotions/osha/v2.yaml) has passed evidence precheck but is **not approved or active**. The v1 registry entry and both v1 baselines remain authoritative. See [promotion](docs/PROMOTION.md) for the later approval, validation, activation, and rollback sequence.
+
 ## Development
 
 ```bash

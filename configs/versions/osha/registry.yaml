@@ -1,0 +1,11 @@
+schema_version: "1.0"
+benchmark_id: osha
+active: v1
+versions:
+  v1:
+    config: configs/hybrid_rerank.yaml
+    baseline: baselines/osha/v1.json
+    query_baseline: baselines/osha/v1.query.json
+    status: active
+    promotion_id: null
+    resolved_config_sha256: null

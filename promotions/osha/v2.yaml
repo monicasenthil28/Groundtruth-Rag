@@ -1,0 +1,35 @@
+schema_version: '1.0'
+promotion_id: osha-retrieval-v2
+benchmark_id: osha
+version: v2
+state: READY_FOR_HUMAN_APPROVAL
+candidate:
+  experiment_id: osha-retrieval-v1
+  candidate_id: rerank-pool-30
+  experiment_spec: experiments/osha/retrieval-v1.yaml
+  experiment_report: reports/experiments/osha/retrieval-v1/experiment.json
+source:
+  base_config: configs/hybrid_rerank.yaml
+  resolved_config_sha256: 207f6f4e538de4fe01eaebf54fed50bb0dd716ee109f7f4b133ee085431812e3
+evidence:
+  regression_report: reports/experiments/osha/retrieval-v1/candidates/rerank-pool-30/regression.json
+  robustness_report: reports/robustness/osha/rerank-pool-30/robustness.json
+  regression: PASS
+  experiment_decision: PROMOTE_CANDIDATE
+  robustness:
+    recall@3: UNCHANGED
+    mrr: INCONCLUSIVE
+    ndcg@3: UNCHANGED
+human_approval:
+  required: true
+  approved: false
+  approved_at: null
+  approved_by: null
+target:
+  config_path: configs/versions/osha/hybrid_rerank_v2.yaml
+  aggregate_baseline: baselines/osha/v2.json
+  query_baseline: baselines/osha/v2.query.json
+  registry: configs/versions/osha/registry.yaml
+  benchmark_output: reports/benchmarks/osha/v2
+  promotion_output: reports/promotions/osha/v2
+validation_run_ids: null

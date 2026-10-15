@@ -44,6 +44,13 @@ from groundtruth_rag.robustness import (
     analyze as analyze_robustness, load_config as load_robustness_config,
     load_run as load_robustness_run, run_latency_trials, write_report as write_robustness,
 )
+from groundtruth_rag.promotion import (
+    activate as activate_promotion, apply as apply_promotion, approve as approve_promotion,
+    baseline_version, benchmark_version, check as check_promotion,
+    config_status as get_config_status, load_manifest as load_promotion_manifest,
+    precheck as promotion_precheck, rollback as rollback_promotion,
+    validate_version,
+)
 from groundtruth_rag.retrieval.bm25 import BM25Retriever
 from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
@@ -602,6 +609,142 @@ def latency_trials(
         typer.echo(f"Latency trials failed: {exc}", err=True)
         raise typer.Exit(2) from exc
     typer.echo(f"Latency trials: {output}")
+
+
+@app.command("promotion-check")
+def promotion_check(manifest: Path) -> None:
+    """Verify saved evidence and mark a draft ready for human review."""
+    try:
+        state = check_promotion(Path(__file__).resolve().parents[2], manifest)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Promotion blocked: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Promotion state: {state.state}")
+
+
+@app.command("promotion-approve")
+def promotion_approve(manifest: Path, reviewer: str | None = typer.Option(None, "--reviewer")) -> None:
+    """Record an explicit, interactive human approval; never stages or activates."""
+    try:
+        root = Path(__file__).resolve().parents[2]
+        current = load_promotion_manifest(manifest)
+        evidence = promotion_precheck(root, current)
+        if current.state != "READY_FOR_HUMAN_APPROVAL":
+            raise ValueError("promotion is not ready for human approval")
+        typer.echo(f"Candidate: {current.candidate.candidate_id}")
+        typer.echo(f"Regression: {evidence['regression']['overall_status']}")
+        for metric, assessment in current.evidence.robustness.items():
+            typer.echo(f"Robustness {metric}: {assessment}")
+        latency = evidence["robustness"].get("latency")
+        if latency:
+            typer.echo(f"Latency: environment-sensitive; median p95 "
+                       f"{latency['summary']['median_trial_p95_ms']:.2f} ms")
+        if not typer.confirm("Proceed with promotion approval?", default=False):
+            raise ValueError("human approval declined")
+        state = approve_promotion(root, manifest, reviewer)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Promotion approval blocked: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Promotion state: {state.state}")
+
+
+@app.command("promotion-apply")
+def promotion_apply(manifest: Path) -> None:
+    """Stage the exact approved candidate config without activating it."""
+    try:
+        state = apply_promotion(Path(__file__).resolve().parents[2], manifest)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Promotion staging blocked: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"PROMOTION_STAGED: {state.target.config_path}; active version remains v1")
+
+
+@app.command("benchmark-version")
+def benchmark_version_command(benchmark: str, version: str) -> None:
+    """Run an isolated candidate validation benchmark; requires prior approval."""
+    root = Path(__file__).resolve().parents[2]
+    manifest = root / "promotions" / benchmark / f"{version}.yaml"
+    try:
+        state = benchmark_version(root, manifest)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Version benchmark failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Candidate validation benchmark: {state.target.benchmark_output}")
+
+
+@app.command("promotion-validate")
+def promotion_validate(manifest: Path) -> None:
+    """Compare completed v2 runs with v1 and record validation evidence."""
+    try:
+        result = validate_version(Path(__file__).resolve().parents[2], manifest)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Validation failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Validation: {result['status']}")
+
+
+@app.command("promotion-baseline")
+def promotion_baseline(manifest: Path) -> None:
+    """Create v2 baseline pair only from validated v2 run files."""
+    try:
+        state = baseline_version(Path(__file__).resolve().parents[2], manifest)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Baselining blocked: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Promotion state: {state.state}; active version remains v1")
+
+
+@app.command("promotion-activate")
+def promotion_activate(manifest: Path) -> None:
+    """Explicitly activate a validated, baselined version."""
+    try:
+        root = Path(__file__).resolve().parents[2]
+        state = load_promotion_manifest(manifest)
+        if state.state not in {"BASELINED", "ROLLED_BACK"}:
+            raise ValueError("v2 must be validated and baselined first")
+        evidence = promotion_precheck(root, state)
+        typer.echo("QUALITY: " + ", ".join(
+            f"{metric} {assessment}" for metric, assessment in state.evidence.robustness.items()))
+        latency = evidence["robustness"].get("latency")
+        typer.echo("LATENCY: " + (f"median p95 {latency['summary']['median_trial_p95_ms']:.2f} ms "
+                                  "in one environment; not a hard gate."
+                                  if latency else "repeated trials unavailable; review required."))
+        if not typer.confirm("Activate this retrieval version?", default=False):
+            raise ValueError("activation declined")
+        state = activate_promotion(root, manifest)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Activation blocked: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Active version: {state.version}")
+
+
+@app.command("promotion-rollback")
+def promotion_rollback(benchmark: str, to: str = typer.Option(..., "--to")) -> None:
+    """Switch the active registry back to an existing version without deleting artifacts."""
+    try:
+        root = Path(__file__).resolve().parents[2]
+        current = get_config_status(root, benchmark)
+        state = rollback_promotion(root, root / "promotions" / benchmark /
+                                   f"{current['active']}.yaml", to)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Rollback blocked: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Active version: {to}; preserved {state.version} artifacts")
+
+
+@app.command("config-status")
+def config_status_command(benchmark: str) -> None:
+    """Resolve the active retrieval config and baselines without loading models."""
+    try:
+        result = get_config_status(Path(__file__).resolve().parents[2], benchmark)
+    except (OSError, ValueError, RuntimeError, ValidationError, KeyError) as exc:
+        typer.echo(f"Config status failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Benchmark: {result['benchmark']}\nActive retrieval version: {result['active']}\n"
+               f"Config: {result['config']}\nBaseline: {result['baseline']}\n"
+               f"Query baseline: {result['query_baseline']}\n"
+               f"Previous: {result['previous'] or 'none'}\n"
+               f"Rollback available: {'YES' if result['rollback_available'] else 'NO'}")
 
 
 @app.command("evaluate-demo")
