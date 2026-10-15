@@ -1,0 +1,10 @@
+name: rerank-pool-30
+retriever:
+  type: hybrid_rerank
+  model: sentence-transformers/all-MiniLM-L6-v2
+  batch_size: 32
+  rrf_k: 60
+  dense_candidates: 20
+  bm25_candidates: 20
+  candidate_pool: 30
+  reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2

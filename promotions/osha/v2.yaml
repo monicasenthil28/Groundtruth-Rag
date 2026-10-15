@@ -2,7 +2,7 @@ schema_version: '1.0'
 promotion_id: osha-retrieval-v2
 benchmark_id: osha
 version: v2
-state: READY_FOR_HUMAN_APPROVAL
+state: VALIDATED
 candidate:
   experiment_id: osha-retrieval-v1
   candidate_id: rerank-pool-30
@@ -22,8 +22,8 @@ evidence:
     ndcg@3: UNCHANGED
 human_approval:
   required: true
-  approved: false
-  approved_at: null
+  approved: true
+  approved_at: '2026-10-15T15:00:59.544123Z'
   approved_by: null
 target:
   config_path: configs/versions/osha/hybrid_rerank_v2.yaml
@@ -32,4 +32,8 @@ target:
   registry: configs/versions/osha/registry.yaml
   benchmark_output: reports/benchmarks/osha/v2
   promotion_output: reports/promotions/osha/v2
-validation_run_ids: null
+validation_run_ids:
+  dense: 2cff6238-dd98-4fd4-a353-5bedde50960e
+  bm25: 2dd21df2-af26-43ec-8c68-16d28baae38a
+  hybrid: cfa500f7-a46b-4c2a-b02d-a01f497a0b58
+  hybrid_rerank: 77dffe18-bded-407c-96bc-836df77a6f0d
