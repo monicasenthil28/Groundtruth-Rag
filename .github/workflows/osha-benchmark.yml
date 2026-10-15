@@ -30,16 +30,10 @@ jobs:
           python -m pip install -e ".[dev,models]"
       - name: Acquire and verify pinned OSHA source
         id: setup
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
-        run: |
-          if ! groundtruth benchmark-setup osha > "$RUNNER_TEMP/osha-setup.log" 2>&1; then
-            cat "$RUNNER_TEMP/osha-setup.log"
-            if grep -Eqi 'HTTP Error|urlopen|timed out|Temporary failure|Name or service not known|Failed to establish|nodename nor servname' "$RUNNER_TEMP/osha-setup.log"; then
-              echo 'SOURCE_UNAVAILABLE: Official OSHA source could not be acquired. Re-run locally with groundtruth benchmark-setup osha --source <verified PDF>.'
-            fi
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/osha-setup.log"
+        run: groundtruth benchmark-setup osha --release-fallback 2>&1 | tee "$RUNNER_TEMP/osha-setup.log"
       - name: Check benchmark readiness
         id: status
         run: groundtruth benchmark-status osha
@@ -72,6 +66,10 @@ jobs:
               echo "- Regression result: $(python -c 'import json; print(json.load(open("reports/regressions/osha/latest/regression.json", encoding="utf-8"))["overall_status"])')"
             else
               echo '- Regression result: NOT RUN'
+            fi
+            if [ -f "$RUNNER_TEMP/osha-setup.log" ]; then
+              source_outcome=$(grep -E '^(OFFICIAL_SOURCE_OK|VERIFIED_LOCAL_SOURCE_OK|RELEASE_FALLBACK_OK|SOURCE_UNAVAILABLE:|SOURCE_HASH_MISMATCH:)' "$RUNNER_TEMP/osha-setup.log" | tail -1 || true)
+              echo "- Source outcome: ${source_outcome:-NOT RUN}"
             fi
             if [ -f reports/benchmarks/osha/SUMMARY.md ]; then
               echo

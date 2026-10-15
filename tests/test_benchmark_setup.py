@@ -12,7 +12,8 @@ from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from groundtruth_rag.benchmark_setup import (
-    BenchmarkSpec, benchmark_paths, benchmark_status, load_spec, setup_benchmark,
+    BenchmarkSpec, SourceHashMismatchError, SourceUnavailableError, benchmark_paths,
+    benchmark_status, load_spec, setup_benchmark, setup_with_release_fallback,
     validate_golden,
 )
 from groundtruth_rag.cli import app
@@ -132,6 +133,130 @@ def test_mock_download(package):
     spec = load_spec(path)
     assert setup_benchmark(root, spec, download=lambda url: io.BytesIO(source.read_bytes()))
     assert benchmark_status(root, spec)["ready"]
+
+
+def test_official_source_succeeds_without_release(package):
+    root, source, _, path = package
+    spec = load_spec(path)
+
+    def no_release(directory):
+        pytest.fail("release fallback must not run after official success")
+
+    built, outcome = setup_with_release_fallback(
+        root, spec, official_download=lambda url: io.BytesIO(source.read_bytes()),
+        release_download=no_release,
+    )
+    assert built and outcome == "OFFICIAL_SOURCE_OK"
+    assert benchmark_status(root, spec)["ready"]
+
+
+def test_existing_verified_source_does_not_claim_official_download(package):
+    root, source, _, path = package
+    spec = load_spec(path)
+    setup_benchmark(root, spec, source)
+
+    def no_download(url):
+        pytest.fail("existing verified source must be reused")
+
+    built, outcome = setup_with_release_fallback(root, spec, official_download=no_download)
+    assert not built and outcome == "VERIFIED_LOCAL_SOURCE_OK"
+
+
+def test_official_unavailable_uses_verified_release(package):
+    root, source, _, path = package
+    spec = load_spec(path)
+
+    def unavailable(url):
+        raise OSError("HTTP Error 403: Forbidden")
+
+    def release(directory):
+        (directory / "osha3120.pdf").write_bytes(source.read_bytes())
+
+    built, outcome = setup_with_release_fallback(
+        root, spec, official_download=unavailable, release_download=release,
+    )
+    assert built and outcome == "RELEASE_FALLBACK_OK"
+    assert file_sha256(benchmark_paths(root)[0]) == spec.source.sha256
+    assert benchmark_status(root, spec)["ready"]
+
+
+def test_both_transports_unavailable_stops_before_corpus(package):
+    root, _, _, path = package
+    spec = load_spec(path)
+
+    def unavailable(url):
+        raise OSError("HTTP Error 403: Forbidden")
+
+    def missing_release(directory):
+        raise OSError("release asset unavailable")
+
+    with pytest.raises(SourceUnavailableError, match="Release asset unavailable"):
+        setup_with_release_fallback(root, spec, official_download=unavailable,
+                                    release_download=missing_release)
+    source, corpus, manifest = benchmark_paths(root)
+    assert not source.exists() and not corpus.exists() and not manifest.exists()
+    assert not benchmark_status(root, spec)["ready"]
+
+
+def test_fallback_wrong_sha_stops_before_corpus(package):
+    root, _, _, path = package
+    spec = load_spec(path)
+
+    def unavailable(url):
+        raise OSError("HTTP Error 403: Forbidden")
+
+    def bad_release(directory):
+        (directory / "osha3120.pdf").write_bytes(b"wrong PDF")
+
+    with pytest.raises(SourceHashMismatchError, match="source SHA-256 mismatch"):
+        setup_with_release_fallback(root, spec, official_download=unavailable,
+                                    release_download=bad_release)
+    assert not benchmark_paths(root)[1].exists()
+
+
+def test_official_wrong_sha_does_not_try_release(package):
+    root, _, _, path = package
+    spec = load_spec(path)
+
+    def no_release(directory):
+        pytest.fail("hash mismatch must not trigger release fallback")
+
+    with pytest.raises(SourceHashMismatchError, match="source SHA-256 mismatch"):
+        setup_with_release_fallback(root, spec,
+                                    official_download=lambda url: io.BytesIO(b"wrong PDF"),
+                                    release_download=no_release)
+    assert not benchmark_paths(root)[1].exists()
+
+
+def test_default_release_download_uses_pinned_asset(monkeypatch, tmp_path: Path):
+    from groundtruth_rag.benchmark_setup import _download_release_asset
+
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+
+    monkeypatch.setattr("groundtruth_rag.benchmark_setup.subprocess.run", fake_run)
+    _download_release_asset(tmp_path)
+    command, options = calls[0]
+    assert command[:3] == ["gh", "release", "download"]
+    assert "benchmark-source-v1" in command
+    assert "monicasenthil28/Groundtruth-Rag" in command
+    assert "osha3120.pdf" in command
+    assert options["check"] is True
+
+
+def test_cli_source_failure_prevents_benchmark_setup(package, monkeypatch):
+    from groundtruth_rag.cli import app
+
+    def unavailable(root, spec):
+        raise SourceUnavailableError("official and release unavailable")
+
+    monkeypatch.setattr("groundtruth_rag.cli.setup_with_release_fallback", unavailable)
+    result = CliRunner().invoke(app, ["benchmark-setup", "osha", "--release-fallback"])
+    assert result.exit_code == 1
+    assert "SOURCE_UNAVAILABLE" in result.output
+    assert not benchmark_paths(package[0])[1].exists()
 
 
 def test_wrong_supplied_source_and_existing_source(package):

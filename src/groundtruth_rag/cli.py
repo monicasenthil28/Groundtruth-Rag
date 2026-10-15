@@ -11,8 +11,9 @@ from rich.table import Table
 
 from groundtruth_rag import __version__
 from groundtruth_rag.benchmark_setup import (
-    benchmark_status as inspect_benchmark, load_spec, setup_benchmark,
-    validate_golden, verify_benchmark_package,
+    SourceHashMismatchError, SourceUnavailableError, benchmark_status as inspect_benchmark,
+    load_spec, setup_benchmark, setup_with_release_fallback, validate_golden,
+    verify_benchmark_package,
 )
 from groundtruth_rag.datasets import DatasetValidationError, load_dataset, tag_counts
 from groundtruth_rag.evaluation.runner import BenchmarkRun, evaluate_retriever
@@ -307,17 +308,37 @@ def benchmark_osha(
 def benchmark_setup_command(
     benchmark_id: str,
     source: Path | None = typer.Option(None, "--source"),
+    release_fallback: bool = typer.Option(False, "--release-fallback"),
 ) -> None:
     """Acquire the pinned public source and rebuild the canonical corpus."""
     if benchmark_id != "osha":
         raise typer.BadParameter("only osha is supported")
     root = Path(__file__).resolve().parents[2]
     try:
+        if source is not None and release_fallback:
+            raise ValueError("--source and --release-fallback cannot be combined")
         spec = load_spec(root / "benchmarks/osha/benchmark.yaml")
-        built = setup_benchmark(root, spec, source)
+        if release_fallback:
+            built, source_status = setup_with_release_fallback(root, spec)
+        else:
+            source_exists = (root / "datasets/raw/osha3120.pdf").exists()
+            built = setup_benchmark(root, spec, source)
+            if source is not None:
+                source_status = "VERIFIED_SOURCE_OK"
+            elif source_exists:
+                source_status = "VERIFIED_LOCAL_SOURCE_OK"
+            else:
+                source_status = "OFFICIAL_SOURCE_OK"
+    except SourceHashMismatchError as exc:
+        typer.echo(f"SOURCE_HASH_MISMATCH: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    except SourceUnavailableError as exc:
+        typer.echo(f"SOURCE_UNAVAILABLE: {exc}", err=True)
+        raise typer.Exit(1) from exc
     except (OSError, ValueError, RuntimeError, ValidationError) as exc:
         typer.echo(f"BENCHMARK REPRODUCTION FAILED: {exc}", err=True)
         raise typer.Exit(1) from exc
+    typer.echo(source_status)
     typer.echo("OSHA benchmark ready; corpus " + ("rebuilt" if built else "reused"))
 
 

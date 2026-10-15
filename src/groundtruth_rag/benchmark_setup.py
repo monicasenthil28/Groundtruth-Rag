@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,8 +18,20 @@ from groundtruth_rag.ingestion.pipeline import ingest
 from groundtruth_rag.labeling.manifest import INGESTION_VERSION, CorpusManifest, file_sha256
 from groundtruth_rag.labeling.models import atomic_write
 from groundtruth_rag.reporting.regression import load_baseline
-from groundtruth_rag.retrieval.factory import load_config
 from groundtruth_rag.retrieval.dense import corpus_fingerprint
+from groundtruth_rag.retrieval.factory import load_config
+
+RELEASE_REPO = "monicasenthil28/Groundtruth-Rag"
+RELEASE_TAG = "benchmark-source-v1"
+RELEASE_ASSET = "osha3120.pdf"
+
+
+class SourceUnavailableError(ValueError):
+    """The pinned source could not be acquired from a transport."""
+
+
+class SourceHashMismatchError(ValueError):
+    """Acquired source bytes differ from the benchmark specification."""
 
 
 class StrictModel(BaseModel):
@@ -110,7 +123,9 @@ def _check_source(source: Path, spec: BenchmarkSpec) -> None:
         raise ValueError(f"source missing: {source}")
     actual = file_sha256(source)
     if actual != spec.source.sha256:
-        raise ValueError(f"source SHA-256 mismatch: expected {spec.source.sha256}, got {actual}")
+        raise SourceHashMismatchError(
+            f"source SHA-256 mismatch: expected {spec.source.sha256}, got {actual}"
+        )
 
 
 def _check_corpus(corpus: Path, manifest_path: Path, spec: BenchmarkSpec) -> CorpusManifest:
@@ -197,9 +212,12 @@ def setup_benchmark(root: Path, spec: BenchmarkSpec, supplied_source: Path | Non
             if supplied_source is not None:
                 shutil.copyfile(supplied_source, temporary)
             else:
-                opener = download or urlopen
-                with opener(spec.source.url) as response, temporary.open("wb") as target:
-                    shutil.copyfileobj(response, target)
+                opener = download or (lambda url: urlopen(url, timeout=30))
+                try:
+                    with opener(spec.source.url) as response, temporary.open("wb") as target:
+                        shutil.copyfileobj(response, target)
+                except OSError as exc:
+                    raise SourceUnavailableError(f"official OSHA source unavailable: {exc}") from exc
             _check_source(temporary, spec)
             temporary.replace(source)
     if corpus.exists() or manifest.exists():
@@ -234,6 +252,44 @@ def setup_benchmark(root: Path, spec: BenchmarkSpec, supplied_source: Path | Non
         temp_corpus.replace(corpus)
         atomic_write(manifest, provenance.model_dump_json(indent=2) + "\n")
     return True
+
+
+def _download_release_asset(directory: Path) -> None:
+    try:
+        subprocess.run(
+            ["gh", "release", "download", RELEASE_TAG, "--repo", RELEASE_REPO,
+             "--pattern", RELEASE_ASSET, "--dir", str(directory)],
+            check=True, capture_output=True, text=True, timeout=120,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise SourceUnavailableError("pinned GitHub Release asset unavailable") from exc
+
+
+def setup_with_release_fallback(root: Path, spec: BenchmarkSpec, *,
+                                official_download=None, release_download=None) -> tuple[bool, str]:
+    """Use the pinned release bytes only when the official transport is unavailable."""
+    source_exists = benchmark_paths(root)[0].exists()
+    try:
+        built = setup_benchmark(root, spec, download=official_download)
+        return built, "VERIFIED_LOCAL_SOURCE_OK" if source_exists else "OFFICIAL_SOURCE_OK"
+    except SourceUnavailableError as official_error:
+        fetch_release = release_download or _download_release_asset
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            try:
+                fetch_release(directory)
+            except SourceUnavailableError:
+                raise
+            except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+                raise SourceUnavailableError(
+                    "official OSHA source and pinned GitHub Release asset unavailable"
+                ) from exc
+            asset = directory / RELEASE_ASSET
+            if not asset.is_file():
+                raise SourceUnavailableError(
+                    "official OSHA source and pinned GitHub Release asset unavailable"
+                ) from official_error
+            return setup_benchmark(root, spec, supplied_source=asset), "RELEASE_FALLBACK_OK"
 
 
 def benchmark_status(root: Path, spec: BenchmarkSpec) -> dict:
