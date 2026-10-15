@@ -106,6 +106,17 @@ Full benchmark reports are local under `reports/benchmarks/osha/`; the committed
 
 Comparison rejects incompatible corpus fingerprints, dataset hashes, query counts, retrievers, or required K values. The OSHA policy disables latency gating by default because timing depends on hardware and runtime conditions; measured latency remains visible in reports. See [regression guidance](docs/REGRESSION.md).
 
+## Retrieval Failure Forensics
+
+Regression identifies which queries changed. Forensics traces where a golden chunk was observed across retrieval stages, without guessing why a model ranked it that way. It reads existing run files; it does not rerun retrieval.
+
+```bash
+groundtruth analyze-failures --dense reports/benchmarks/osha/dense.json --bm25 reports/benchmarks/osha/bm25.json --hybrid reports/benchmarks/osha/hybrid.json --rerank reports/benchmarks/osha/hybrid_rerank.json --output reports/forensics/osha --target-k 3
+groundtruth failure-inspect reports/forensics/osha/forensics.json --query q019
+```
+
+The JSON and Markdown reports contain relevant chunk IDs, ranks, scores, and classifications, but no source passages or query text. They stay local under `reports/forensics/`. Unknown ranks or pool membership mean the saved run depth cannot establish them.
+
 ## Continuous Integration
 
 Pull requests and pushes to `main` run tests, Ruff, `compileall`, CLI smoke checks, `groundtruth benchmark-verify osha`, and a synthetic regression gate. The normal CI workflow uses `.[dev]`; it does **not** download the OSHA PDF or model weights. The synthetic PASS/WARN/FAIL fixtures exercise the regression engine, not real retrieval quality.

@@ -30,6 +30,15 @@ Aggregate Regression + Query-Level Diagnostics
 PASS / WARN / FAIL + Failure Diagnostics
 ```
 
+```text
+Golden Query -> Dense -----------\
+             -> BM25 ------------> Hybrid RRF -> Candidate Pool -> CrossEncoder -> Final Ranking
+                                    |                  |                |
+                                    +------------------+----------------+-> Failure Forensics
+
+Benchmark -> Regression -> Changed Queries -> Failure Forensics -> Stage-Level Diagnosis
+```
+
 ## Responsibilities
 
 - **Ingestion (implemented):** PDF, UTF-8 text, and Markdown loaders preserve document source and PDF page numbers. Deterministic word chunking produces stable IDs and position metadata; versioned corpus JSONL stores the resulting chunks.
@@ -39,6 +48,7 @@ PASS / WARN / FAIL + Failure Diagnostics
 - **Generation evaluation:** Optional answer-level assessment, separate from retrieval metrics. Planned metrics are faithfulness and answer relevance; the current `GenerationMetric` is an interface only.
 - **Reporting:** The runner emits versioned JSON with per-query hits, metrics, latency, and run configuration. The aggregate baseline contains no source text or relevance labels. A separate query-rank baseline contains only IDs and relevant positions, with no query or source text. Regression reports contain metric deltas, compatibility checks, query changes, and PASS/WARN/FAIL decisions.
 - **Regression testing:** Compare a candidate summary to a versioned baseline after corpus, dataset, query-count, retriever, metric, and K compatibility checks. Quality uses absolute-drop thresholds; latency uses independently configurable relative-increase thresholds. No composite score is used.
+- **Failure forensics:** Analyze four compatible saved runs to trace relevant chunk IDs through Dense, BM25, RRF, and CrossEncoder output. The report distinguishes observed rank movement from unknown ranks beyond saved depth and never infers model intent.
 
 The CLI provides `--help`, `version`, `ingest`, `prepare-osha`, `label`, `label-status`, `audit-dataset`, `export-review`, `benchmark-setup`, `benchmark-status`, `benchmark-verify`, `benchmark-osha`, `baseline-create`, `regress`, `validate-dataset`, `evaluate`, `evaluate-demo`, and `compare`. `benchmark-osha` refuses to run until the pinned source, corpus, committed golden dataset, and baseline are compatible. The older `--questions` path still audits local review progress when explicitly supplied. `evaluate-demo` uses fixed synthetic rankings only. Generation evaluation remains future work.
 

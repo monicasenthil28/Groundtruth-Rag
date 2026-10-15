@@ -36,6 +36,9 @@ from groundtruth_rag.reporting.regression import (
 from groundtruth_rag.reporting.query_regression import (
     compare_queries, create_query_baseline, load_query_baseline,
 )
+from groundtruth_rag.reporting.forensics import (
+    analyze_forensics, load_forensics, load_run as load_forensics_run, write_forensics,
+)
 from groundtruth_rag.retrieval.bm25 import BM25Retriever
 from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
@@ -476,6 +479,47 @@ def query_baseline_create(
         typer.echo(f"Query baseline creation failed: {exc}", err=True)
         raise typer.Exit(2) from exc
     typer.echo(f"Query baseline: {output}; queries: {result.query_count}")
+
+
+@app.command("analyze-failures")
+def analyze_failures(
+    dense: Path = typer.Option(..., "--dense"),
+    bm25: Path = typer.Option(..., "--bm25"),
+    hybrid: Path = typer.Option(..., "--hybrid"),
+    rerank: Path = typer.Option(..., "--rerank"),
+    output: Path = typer.Option(..., "--output"),
+    target_k: int = typer.Option(3, "--target-k"),
+) -> None:
+    """Trace relevant chunks through saved retrieval stage rankings."""
+    try:
+        report = analyze_forensics(
+            load_forensics_run(dense), load_forensics_run(bm25),
+            load_forensics_run(hybrid), load_forensics_run(rerank), target_k=target_k,
+        )
+        _, markdown = write_forensics(report, output)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Failure analysis failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Forensics: {markdown}; queries: {report.query_count}; target K: {target_k}")
+
+
+@app.command("failure-inspect")
+def failure_inspect(path: Path, query: str = typer.Option(..., "--query")) -> None:
+    """Inspect one query in a saved text-free forensic report."""
+    try:
+        report = load_forensics(path)
+        record = next((item for item in report.queries if item.query_id == query), None)
+        if record is None:
+            raise ValueError(f"query not found: {query}")
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Failure inspection failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Query: {record.query_id}\nRelevant chunks: {record.relevant_chunk_count}"
+               f"\nTarget K: {report.target_k}")
+    for stage in ("dense", "bm25", "hybrid", "rerank"):
+        rank = record.first_relevant_rank[stage]
+        typer.echo(f"{stage} first relevant: {rank if rank is not None else 'not established within saved depth'}")
+    typer.echo(f"Flags: {', '.join(record.flags) or 'none'}")
 
 
 @app.command("evaluate-demo")

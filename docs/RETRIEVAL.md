@@ -22,6 +22,12 @@ Dense and BM25 each retrieve a configurable candidate depth. For every candidate
 
 The hybrid result provides a bounded candidate pool (default 20). `cross-encoder/ms-marco-MiniLM-L-6-v2` scores `(query, chunk text)` pairs. Final order uses descending CrossEncoder score, breaking ties by chunk ID. Hits retain RRF diagnostics and add the CrossEncoder score.
 
+## Stage-Level Forensics
+
+The hybrid configuration retrieves up to 20 Dense and 20 BM25 candidates before RRF; the reranker scores a fused pool of up to 20. Standard run JSON saves only the final top 10 at each stage. Hybrid hits retain component ranks and scores plus `rrf_score`; reranked hits retain those fields and `crossencoder_score`.
+
+`analyze-failures` checks corpus, dataset, query IDs, relevance judgments, K values, and stage configuration before comparing saved rankings. It can prove a component rank beyond the saved top 10 when that rank survives in hybrid or reranked hit metadata. A reranked final hit proves candidate-pool entry even when its fused rank is unavailable. Conversely, if a golden chunk is absent from saved Hybrid top 10 and the candidate pool is 20 deep, pool membership remains unknown; the report does not call it a candidate-pool miss. A known candidate that moves down or falls beyond the saved final depth is an observed rerank regression, not a claim about why CrossEncoder scored it that way.
+
 ## Cache And Tradeoffs
 
 Dense embeddings are cached under `.cache/groundtruth-rag/`, or `GROUNDTRUTH_CACHE_DIR` when set. The cache key includes model name, ordered chunk IDs and text, and normalization format. Changing the corpus or model invalidates the key. Cache files are ignored by Git. Query embeddings are computed for each retrieval call.
