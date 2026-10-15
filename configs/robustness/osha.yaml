@@ -1,0 +1,24 @@
+schema_version: "1.0"
+quality:
+  enabled: true
+  bootstrap_iterations: 10000
+  random_seed: 2026
+  confidence_level: 0.95
+  metrics:
+    - recall@1
+    - recall@3
+    - recall@5
+    - recall@10
+    - hit_rate@1
+    - hit_rate@3
+    - hit_rate@5
+    - hit_rate@10
+    - mrr
+    - ndcg@1
+    - ndcg@3
+    - ndcg@5
+    - ndcg@10
+latency:
+  enabled: true
+  warmup_runs: 1
+  measured_runs: 5

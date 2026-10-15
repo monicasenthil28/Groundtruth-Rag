@@ -22,3 +22,4 @@ datasets/osha/*.progress.json
 reports/tmp/
 reports/drafts/
 reports/ci/
+reports/robustness/

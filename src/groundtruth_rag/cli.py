@@ -40,6 +40,10 @@ from groundtruth_rag.reporting.forensics import (
     analyze_forensics, load_forensics, load_run as load_forensics_run, write_forensics,
 )
 from groundtruth_rag.experiments import load_experiment_report, run_experiment
+from groundtruth_rag.robustness import (
+    analyze as analyze_robustness, load_config as load_robustness_config,
+    load_run as load_robustness_run, run_latency_trials, write_report as write_robustness,
+)
 from groundtruth_rag.retrieval.bm25 import BM25Retriever
 from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
@@ -549,6 +553,55 @@ def experiment_inspect(path: Path, candidate: str = typer.Option(..., "--candida
         typer.echo(f"{metric}: baseline {old:.4f}; candidate {new:.4f}; delta {new - old:+.4f}")
     typer.echo(f"New critical query failures: {row['new_critical_failures']}")
     typer.echo(f"Forensics: {row['forensics_status']}")
+
+
+@app.command("robustness-analyze")
+def robustness_analyze(
+    baseline_run: Path = typer.Option(..., "--baseline-run"),
+    candidate_run: Path = typer.Option(..., "--candidate-run"),
+    config: Path = typer.Option(..., "--config"),
+    output: Path = typer.Option(..., "--output"),
+    latency: Path | None = typer.Option(None, "--latency"),
+) -> None:
+    """Analyze saved paired runs; retrieval is never executed."""
+    try:
+        report = analyze_robustness(load_robustness_run(baseline_run),
+                                    load_robustness_run(candidate_run),
+                                    load_robustness_config(config))
+        if latency is not None:
+            measurement = json.loads(latency.read_text(encoding="utf-8"))
+            if (measurement.get("schema_version") != report["schema_version"]
+                    or measurement.get("candidate") != report["candidate"]
+                    or measurement.get("corpus_fingerprint") != report["corpus_fingerprint"]
+                    or measurement.get("dataset_sha256") != report["dataset_sha256"]):
+                raise ValueError("latency trial identity differs from quality report")
+            report["latency"] = measurement
+        write_robustness(report, output)
+    except (OSError, ValueError, RuntimeError, ValidationError) as exc:
+        typer.echo(f"Robustness analysis failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Robustness report: {output / 'ROBUSTNESS.md'}")
+
+
+@app.command("latency-trials")
+def latency_trials(
+    specification: Path = typer.Option(..., "--experiment"),
+    candidate: str = typer.Option(..., "--candidate"),
+    config: Path = typer.Option(..., "--config"),
+    output: Path = typer.Option(..., "--output"),
+) -> None:
+    """Measure repeated full-query trials using a validated experiment candidate."""
+    try:
+        root = Path(__file__).resolve().parents[2]
+        if not output.resolve().is_relative_to((root / "reports/robustness").resolve()):
+            raise ValueError("latency output must be under reports/robustness/")
+        result = run_latency_trials(root, specification, candidate, load_robustness_config(config))
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    except (OSError, ValueError, RuntimeError, ValidationError) as exc:
+        typer.echo(f"Latency trials failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Latency trials: {output}")
 
 
 @app.command("evaluate-demo")

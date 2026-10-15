@@ -20,6 +20,8 @@ The supported comparison is **Dense** vs **Dense + BM25** vs **Dense + BM25 + Cr
 
 See [architecture](docs/ARCHITECTURE.md) for the planned evaluation flow.
 
+Saved baseline and candidate runs can now be assessed with paired query bootstrap analysis; see [robustness](docs/ROBUSTNESS.md). This is advisory evidence, separate from regression policy and promotion decisions.
+
 ## Development
 
 ```bash
