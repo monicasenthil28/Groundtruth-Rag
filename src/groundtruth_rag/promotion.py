@@ -326,10 +326,13 @@ def write_promotion_report(root: Path, manifest: PromotionManifest, validation: 
              f"- State: {manifest.state}", "", "## Evidence Summary", "",
              f"- Regression: {manifest.evidence.regression}",
              f"- Experiment decision: {manifest.evidence.experiment_decision}",
-             "- Query diagnostics: included in the saved regression report.",
-             "- Forensics: unavailable for the single Phase 10 candidate run; v2 validation will run four stages."]
+             "- Query diagnostics: included in the saved regression report."]
     lines.extend(f"- Robustness {metric}: {assessment}"
                  for metric, assessment in manifest.evidence.robustness.items())
+    if validation and validation.get("forensics_summary"):
+        lines.append("- Forensics: completed on four v2 stage runs; see forensics.json.")
+    else:
+        lines.append("- Forensics: unavailable for the single Phase 10 candidate run; four v2 stage runs required.")
     robust_path = path_in(root, manifest.evidence.robustness_report, "reports/robustness")
     robust = _json(robust_path)
     latency = robust.get("latency")
@@ -343,7 +346,9 @@ def write_promotion_report(root: Path, manifest: PromotionManifest, validation: 
                   "", "## Validation Benchmark", "",
                   f"Status: {validation['status'] if validation else 'NOT_RUN'}",
                   "", "## Baseline v2", "",
-                  "Created only after validation; v1 remains intact.",
+                  ("Created from validated v2 runs; v1 remains intact." if manifest.state in
+                   {"BASELINED", "ACTIVE", "ROLLED_BACK"} else
+                   "Not created; v1 remains intact."),
                   "", "## Activation And Rollback", "",
                   f"Active version: {payload['active_version']}",
                   "Rollback: groundtruth promotion-rollback osha --to v1"])

@@ -139,6 +139,9 @@ def test_check_only_marks_ready(tmp_path, monkeypatch):
     assert not (root / checked.target.config_path).exists()
     report = (root / checked.target.promotion_output / "PROMOTION.md").read_text()
     assert "1365.47" in report and "source text" not in report
+    promotion.write_promotion_report(root, checked, {"status": "PASS", "forensics_summary": {"x": 1}})
+    completed = (root / checked.target.promotion_output / "PROMOTION.md").read_text()
+    assert "completed on four v2 stage runs" in completed
 
 
 @pytest.mark.parametrize(("artifact", "change", "message"), [

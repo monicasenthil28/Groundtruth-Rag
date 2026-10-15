@@ -4,7 +4,7 @@ The Phase 10 `PROMOTE_CANDIDATE` label is advisory. It does not approve, stage, 
 
 ## Current Stop Point
 
-`promotions/osha/v2.yaml` names `rerank-pool-30`. `groundtruth promotion-check promotions/osha/v2.yaml` verifies the fixed experiment, resolved hash, saved run and summary, PASS regression, advisory decision, robustness identities, corpus/dataset hashes, query count, 150/30 chunking, and reviewed q013/q019 status. The manifest is `READY_FOR_HUMAN_APPROVAL`, with `approved: false`. This command does not stage or activate anything. Local experiment and robustness reports must be available for this precheck; a clean clone must first reproduce those evidence artifacts. `groundtruth config-status osha` reads only the registry and active files, without models.
+`promotions/osha/v2.yaml` names `rerank-pool-30`. `groundtruth promotion-check promotions/osha/v2.yaml` verifies the fixed experiment, resolved hash, saved run and summary, PASS regression, advisory decision, robustness identities, corpus/dataset hashes, query count, 150/30 chunking, and reviewed q013/q019 status. Explicit human approval was recorded; the v2 config was staged from the resolved candidate, and a real four-retriever validation benchmark passed aggregate regression, query diagnostics, forensics, and paired robustness checks. The manifest is now `VALIDATED`, but the registry remains `active: v1`. No v2 baseline pair has been created. Local experiment, benchmark, robustness, and validation reports are required for these checks; a clean clone must reproduce those evidence artifacts. `groundtruth config-status osha` reads only the registry and active files, without models.
 
 ## Later Lifecycle
 
