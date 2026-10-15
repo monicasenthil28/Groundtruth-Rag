@@ -21,7 +21,8 @@ from groundtruth_rag.reporting.query_regression import (
     _load_run, compare_queries, create_query_baseline, load_query_baseline,
 )
 from groundtruth_rag.reporting.regression import (
-    apply_query_gate, compare, create_baseline, load_baseline, load_policy, load_summary,
+    PromotionProvenance, apply_query_gate, compare, create_baseline, load_baseline,
+    load_policy, load_summary,
 )
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
 from groundtruth_rag.robustness import analyze as analyze_robustness
@@ -492,6 +493,7 @@ def baseline_version(root: Path, manifest_path: Path) -> PromotionManifest:
     evidence = precheck(root, manifest)
     output = path_in(root, manifest.target.benchmark_output, "reports/benchmarks")
     result = _json(path_in(root, manifest.target.promotion_output, "reports/promotions") / "validation.json")
+    regression = _json(path_in(root, manifest.target.promotion_output, "reports/promotions") / "regression.json")
     summary = load_summary(output / "summary.json")
     if set(summary.runs) != {"dense", "bm25", "hybrid", "hybrid_rerank"}:
         raise ValueError("v2 baseline requires all four retriever runs")
@@ -500,15 +502,32 @@ def baseline_version(root: Path, manifest_path: Path) -> PromotionManifest:
             or summary.corpus_fingerprint != evidence["context"]["fingerprint"]
             or summary.dataset_sha256 != evidence["context"]["dataset_sha256"]):
         raise ValueError("v2 validation evidence differs from completed benchmark")
+    if (regression.get("overall_status") != "PASS"
+            or regression.get("corpus_fingerprint") != summary.corpus_fingerprint
+            or regression.get("dataset_sha256") != summary.dataset_sha256):
+        raise ValueError("v2 regression evidence is missing, failed, or incompatible")
+    diagnostics = regression.get("query_analysis", {}).get("retrievers", {})
+    if (set(diagnostics) != set(summary.runs)
+            or any(diagnostics[name].get("new_failures", {}).get("3") for name in summary.runs)):
+        raise ValueError("v2 query diagnostics are missing or contain new Recall@3 failures")
+    expected_labels = {q.query_id: set(q.relevant_chunk_ids) for q in evidence["context"]["queries"]}
     for name in summary.runs:
-        _load_run(output / "summary.json", summary, name)
+        run = _load_run(output / "summary.json", summary, name)
+        if ({q.query_id: set(q.relevant_chunk_ids) for q in run.per_query_results} != expected_labels
+                or "q013" in expected_labels or "q019" not in expected_labels):
+            raise ValueError("v2 run query set or golden judgments differ")
     aggregate_path = path_in(root, manifest.target.aggregate_baseline, "baselines")
     query_path = path_in(root, manifest.target.query_baseline, "baselines")
     if aggregate_path.exists() or query_path.exists():
         raise ValueError("v2 baseline exists; refusing replacement")
     aggregate = create_baseline(output / "summary.json", aggregate_path,
                                 f"{manifest.benchmark_id}-{manifest.version}",
-                                domain=manifest.benchmark_id)
+                                domain=manifest.benchmark_id,
+                                promotion_provenance=PromotionProvenance(
+                                    promotion_id=manifest.promotion_id,
+                                    experiment_id=manifest.candidate.experiment_id,
+                                    candidate_id=manifest.candidate.candidate_id,
+                                    resolved_config_sha256=manifest.source.resolved_config_sha256))
     create_query_baseline(output / "summary.json", aggregate, query_path)
     registry = evidence["registry"]
     entry = registry.versions[manifest.version]
@@ -558,6 +577,13 @@ def activate(root: Path, manifest_path: Path) -> PromotionManifest:
             or query.query_count != aggregate.query_count
             or {name: row.run_id for name, row in query.retrievers.items()} != manifest.validation_run_ids):
         raise ValueError("v2 baseline pair does not match validated run IDs")
+    expected_provenance = PromotionProvenance(
+        promotion_id=manifest.promotion_id,
+        experiment_id=manifest.candidate.experiment_id,
+        candidate_id=manifest.candidate.candidate_id,
+        resolved_config_sha256=manifest.source.resolved_config_sha256)
+    if aggregate.promotion_provenance != expected_provenance or query.promotion_provenance != expected_provenance:
+        raise ValueError("v2 baseline promotion provenance differs")
     registry.active = manifest.version
     entry.status = "active"
     save_registry(path_in(root, manifest.target.registry, "configs/versions"), registry)
@@ -599,4 +625,5 @@ def config_status(root: Path, benchmark_id: str) -> dict:
     return {"benchmark": benchmark_id, "active": registry.active, "config": entry.config,
             "baseline": entry.baseline, "query_baseline": entry.query_baseline,
             "previous": "v1" if registry.active != "v1" else None,
-            "rollback_available": registry.active != "v1" and "v1" in registry.versions}
+            "rollback_available": registry.active != "v1" and "v1" in registry.versions,
+            "versions": {name: version.status for name, version in registry.versions.items()}}

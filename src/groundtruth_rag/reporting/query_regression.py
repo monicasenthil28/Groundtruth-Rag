@@ -8,7 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from groundtruth_rag.evaluation.metrics import query_metrics
 from groundtruth_rag.evaluation.runner import BenchmarkRun
 from groundtruth_rag.labeling.models import atomic_write
-from groundtruth_rag.reporting.regression import Baseline, BenchmarkSummary, _read_json, load_summary
+from groundtruth_rag.reporting.regression import (
+    Baseline, BenchmarkSummary, PromotionProvenance, _read_json, load_summary,
+)
 
 
 class StrictModel(BaseModel):
@@ -54,6 +56,7 @@ class QueryBaseline(StrictModel):
     query_count: int = Field(gt=0)
     k_values: list[int]
     retrievers: dict[str, RetrieverRanks]
+    promotion_provenance: PromotionProvenance | None = None
 
     @model_validator(mode="after")
     def valid_baseline(self) -> "QueryBaseline":
@@ -136,6 +139,7 @@ def create_query_baseline(summary_path: Path, aggregate: Baseline, output: Path,
         benchmark_name=aggregate.name, corpus_fingerprint=summary.corpus_fingerprint,
         dataset_sha256=summary.dataset_sha256, query_count=summary.query_count,
         k_values=summary.k_values, retrievers=runs,
+        promotion_provenance=aggregate.promotion_provenance,
     )
     content = baseline.model_dump_json(indent=2) + "\n"
     if force:

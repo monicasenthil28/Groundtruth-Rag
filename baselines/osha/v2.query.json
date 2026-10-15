@@ -1,0 +1,1178 @@
+{
+  "schema_version": "1.0",
+  "benchmark_name": "osha-v2",
+  "promotion_provenance": {
+    "promotion_id": "osha-retrieval-v2",
+    "experiment_id": "osha-retrieval-v1",
+    "candidate_id": "rerank-pool-30",
+    "resolved_config_sha256": "207f6f4e538de4fe01eaebf54fed50bb0dd716ee109f7f4b133ee085431812e3"
+  },
+  "corpus_fingerprint": "55bebfded1835db967ef9fed5688ff0d8ad919a42c308cbc555972419df3531e",
+  "dataset_sha256": "78dd4d33573577c9ce5b285699afea6c91ad6bfcce2499f8a629960cb058f85e",
+  "query_count": 29,
+  "k_values": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "retrievers": {
+    "dense": {
+      "run_id": "2cff6238-dd98-4fd4-a353-5bedde50960e",
+      "configuration_name": "dense_minilm",
+      "retriever_type": "dense",
+      "queries": [
+        {
+          "query_id": "q001",
+          "relevant_chunk_ids": [
+            "d72bee2b053c50a02debd5271bb2647ea3132fa4358c96a174583f247c668b89"
+          ],
+          "relevant_positions": [
+            9
+          ]
+        },
+        {
+          "query_id": "q002",
+          "relevant_chunk_ids": [
+            "d32c76a7b00293b4b715ad2555e9a5cfb8b8a0738287fe32e36f500a151fcfdf"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q003",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q004",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q005",
+          "relevant_chunk_ids": [
+            "2e1285b94953290547b497aa38bac552cbd1365e314cc8554534582c2e09cc72",
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2,
+            3,
+            5
+          ]
+        },
+        {
+          "query_id": "q006",
+          "relevant_chunk_ids": [
+            "71440d64d09902b3c232e3fab2e9d263bbc3b5835bbb7174665acf59e30ba8a3"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q007",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81",
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            1,
+            6
+          ]
+        },
+        {
+          "query_id": "q008",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801",
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            4
+          ]
+        },
+        {
+          "query_id": "q009",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            3
+          ]
+        },
+        {
+          "query_id": "q010",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            4
+          ]
+        },
+        {
+          "query_id": "q011",
+          "relevant_chunk_ids": [
+            "dcb49a24f2e723e3055ad645ef00b67fcf312f9730c275706852408feb636eec"
+          ],
+          "relevant_positions": [
+            7
+          ]
+        },
+        {
+          "query_id": "q012",
+          "relevant_chunk_ids": [
+            "6c70b47b391ac115b40f1fb1bb9446f0d0f1c0ad1a27ba94a2d39ce3c8e3fd3f",
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9"
+          ],
+          "relevant_positions": [
+            1,
+            3
+          ]
+        },
+        {
+          "query_id": "q014",
+          "relevant_chunk_ids": [
+            "662840316094d838572c1a6157f57b2f34b1e916ca755d1edcd9f4261d2dab87"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q015",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q016",
+          "relevant_chunk_ids": [
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            6
+          ]
+        },
+        {
+          "query_id": "q017",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q018",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": [
+            10
+          ]
+        },
+        {
+          "query_id": "q019",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q020",
+          "relevant_chunk_ids": [
+            "edbd4b52763d9032d2d8e4b50cd6870657f049cab19f972b704a8b424e49a64b"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q021",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            8
+          ]
+        },
+        {
+          "query_id": "q022",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            7
+          ]
+        },
+        {
+          "query_id": "q023",
+          "relevant_chunk_ids": [
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q024",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q025",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q026",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": [
+            6
+          ]
+        },
+        {
+          "query_id": "q027",
+          "relevant_chunk_ids": [
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            8
+          ]
+        },
+        {
+          "query_id": "q028",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            6
+          ]
+        },
+        {
+          "query_id": "q029",
+          "relevant_chunk_ids": [
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            2,
+            6
+          ]
+        },
+        {
+          "query_id": "q030",
+          "relevant_chunk_ids": [
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        }
+      ]
+    },
+    "bm25": {
+      "run_id": "2dd21df2-af26-43ec-8c68-16d28baae38a",
+      "configuration_name": "bm25",
+      "retriever_type": "bm25",
+      "queries": [
+        {
+          "query_id": "q001",
+          "relevant_chunk_ids": [
+            "d72bee2b053c50a02debd5271bb2647ea3132fa4358c96a174583f247c668b89"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q002",
+          "relevant_chunk_ids": [
+            "d32c76a7b00293b4b715ad2555e9a5cfb8b8a0738287fe32e36f500a151fcfdf"
+          ],
+          "relevant_positions": [
+            5
+          ]
+        },
+        {
+          "query_id": "q003",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            9
+          ]
+        },
+        {
+          "query_id": "q004",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q005",
+          "relevant_chunk_ids": [
+            "2e1285b94953290547b497aa38bac552cbd1365e314cc8554534582c2e09cc72",
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2,
+            6
+          ]
+        },
+        {
+          "query_id": "q006",
+          "relevant_chunk_ids": [
+            "71440d64d09902b3c232e3fab2e9d263bbc3b5835bbb7174665acf59e30ba8a3"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q007",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81",
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            1,
+            3
+          ]
+        },
+        {
+          "query_id": "q008",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801",
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q009",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q010",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q011",
+          "relevant_chunk_ids": [
+            "dcb49a24f2e723e3055ad645ef00b67fcf312f9730c275706852408feb636eec"
+          ],
+          "relevant_positions": [
+            7
+          ]
+        },
+        {
+          "query_id": "q012",
+          "relevant_chunk_ids": [
+            "6c70b47b391ac115b40f1fb1bb9446f0d0f1c0ad1a27ba94a2d39ce3c8e3fd3f",
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q014",
+          "relevant_chunk_ids": [
+            "662840316094d838572c1a6157f57b2f34b1e916ca755d1edcd9f4261d2dab87"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q015",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            5
+          ]
+        },
+        {
+          "query_id": "q016",
+          "relevant_chunk_ids": [
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q017",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            7
+          ]
+        },
+        {
+          "query_id": "q018",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q019",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q020",
+          "relevant_chunk_ids": [
+            "edbd4b52763d9032d2d8e4b50cd6870657f049cab19f972b704a8b424e49a64b"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q021",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q022",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q023",
+          "relevant_chunk_ids": [
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q024",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            4
+          ]
+        },
+        {
+          "query_id": "q025",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q026",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q027",
+          "relevant_chunk_ids": [
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q028",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            7
+          ]
+        },
+        {
+          "query_id": "q029",
+          "relevant_chunk_ids": [
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            2,
+            4
+          ]
+        },
+        {
+          "query_id": "q030",
+          "relevant_chunk_ids": [
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7"
+          ],
+          "relevant_positions": [
+            2,
+            3
+          ]
+        }
+      ]
+    },
+    "hybrid": {
+      "run_id": "cfa500f7-a46b-4c2a-b02d-a01f497a0b58",
+      "configuration_name": "hybrid_rrf",
+      "retriever_type": "hybrid",
+      "queries": [
+        {
+          "query_id": "q001",
+          "relevant_chunk_ids": [
+            "d72bee2b053c50a02debd5271bb2647ea3132fa4358c96a174583f247c668b89"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q002",
+          "relevant_chunk_ids": [
+            "d32c76a7b00293b4b715ad2555e9a5cfb8b8a0738287fe32e36f500a151fcfdf"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q003",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            10
+          ]
+        },
+        {
+          "query_id": "q004",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q005",
+          "relevant_chunk_ids": [
+            "2e1285b94953290547b497aa38bac552cbd1365e314cc8554534582c2e09cc72",
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2,
+            3,
+            5
+          ]
+        },
+        {
+          "query_id": "q006",
+          "relevant_chunk_ids": [
+            "71440d64d09902b3c232e3fab2e9d263bbc3b5835bbb7174665acf59e30ba8a3"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q007",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81",
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            1,
+            3
+          ]
+        },
+        {
+          "query_id": "q008",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801",
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q009",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            4
+          ]
+        },
+        {
+          "query_id": "q010",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q011",
+          "relevant_chunk_ids": [
+            "dcb49a24f2e723e3055ad645ef00b67fcf312f9730c275706852408feb636eec"
+          ],
+          "relevant_positions": [
+            5
+          ]
+        },
+        {
+          "query_id": "q012",
+          "relevant_chunk_ids": [
+            "6c70b47b391ac115b40f1fb1bb9446f0d0f1c0ad1a27ba94a2d39ce3c8e3fd3f",
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9"
+          ],
+          "relevant_positions": [
+            1,
+            6
+          ]
+        },
+        {
+          "query_id": "q014",
+          "relevant_chunk_ids": [
+            "662840316094d838572c1a6157f57b2f34b1e916ca755d1edcd9f4261d2dab87"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q015",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q016",
+          "relevant_chunk_ids": [
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            2,
+            9
+          ]
+        },
+        {
+          "query_id": "q017",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q018",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": [
+            4
+          ]
+        },
+        {
+          "query_id": "q019",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q020",
+          "relevant_chunk_ids": [
+            "edbd4b52763d9032d2d8e4b50cd6870657f049cab19f972b704a8b424e49a64b"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q021",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q022",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q023",
+          "relevant_chunk_ids": [
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            4
+          ]
+        },
+        {
+          "query_id": "q024",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q025",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q026",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q027",
+          "relevant_chunk_ids": [
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q028",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            5
+          ]
+        },
+        {
+          "query_id": "q029",
+          "relevant_chunk_ids": [
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            2,
+            3
+          ]
+        },
+        {
+          "query_id": "q030",
+          "relevant_chunk_ids": [
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        }
+      ]
+    },
+    "hybrid_rerank": {
+      "run_id": "77dffe18-bded-407c-96bc-836df77a6f0d",
+      "configuration_name": "rerank-pool-30",
+      "retriever_type": "hybrid_rerank",
+      "queries": [
+        {
+          "query_id": "q001",
+          "relevant_chunk_ids": [
+            "d72bee2b053c50a02debd5271bb2647ea3132fa4358c96a174583f247c668b89"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q002",
+          "relevant_chunk_ids": [
+            "d32c76a7b00293b4b715ad2555e9a5cfb8b8a0738287fe32e36f500a151fcfdf"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q003",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            8
+          ]
+        },
+        {
+          "query_id": "q004",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q005",
+          "relevant_chunk_ids": [
+            "2e1285b94953290547b497aa38bac552cbd1365e314cc8554534582c2e09cc72",
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2,
+            3,
+            6
+          ]
+        },
+        {
+          "query_id": "q006",
+          "relevant_chunk_ids": [
+            "71440d64d09902b3c232e3fab2e9d263bbc3b5835bbb7174665acf59e30ba8a3"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q007",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81",
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q008",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801",
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2,
+            8
+          ]
+        },
+        {
+          "query_id": "q009",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q010",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q011",
+          "relevant_chunk_ids": [
+            "dcb49a24f2e723e3055ad645ef00b67fcf312f9730c275706852408feb636eec"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q012",
+          "relevant_chunk_ids": [
+            "6c70b47b391ac115b40f1fb1bb9446f0d0f1c0ad1a27ba94a2d39ce3c8e3fd3f",
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9"
+          ],
+          "relevant_positions": [
+            1,
+            2
+          ]
+        },
+        {
+          "query_id": "q014",
+          "relevant_chunk_ids": [
+            "662840316094d838572c1a6157f57b2f34b1e916ca755d1edcd9f4261d2dab87"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q015",
+          "relevant_chunk_ids": [
+            "8383bf52edd28c6c9e71438d81e4c59a8d44dbd9d54f2e4157bb812a14a17ddc",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            2,
+            6
+          ]
+        },
+        {
+          "query_id": "q016",
+          "relevant_chunk_ids": [
+            "6c7e51cd307d6821c32266aa7407b83c9779fcad2e54891db576b4c1d85a1ab9",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q017",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f",
+            "cd2837b844546257e751b1d8253346b343dda219426f7db9763dfda4edd81fd4"
+          ],
+          "relevant_positions": [
+            1,
+            4
+          ]
+        },
+        {
+          "query_id": "q018",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q019",
+          "relevant_chunk_ids": [
+            "57bbbdbee3c07dfd3617a004291034e8b394da3371195ddc8d41c3714c536c9f"
+          ],
+          "relevant_positions": []
+        },
+        {
+          "query_id": "q020",
+          "relevant_chunk_ids": [
+            "edbd4b52763d9032d2d8e4b50cd6870657f049cab19f972b704a8b424e49a64b"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q021",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q022",
+          "relevant_chunk_ids": [
+            "963790de87778b87bdd204595c83b3c7ec681ace589aa557facd7e3debecce81"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q023",
+          "relevant_chunk_ids": [
+            "fa0bf6145f83a8a0eff83e2aad7c394e2407b2df0319a863c10e42b66c757d51"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q024",
+          "relevant_chunk_ids": [
+            "40ee11047dc640a6631969bba5601ef72849dd2617c9dd71b55315415f08fe0c"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q025",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": [
+            2
+          ]
+        },
+        {
+          "query_id": "q026",
+          "relevant_chunk_ids": [
+            "04d2e25a15cfc470345e78b96dcc8b15d36be2b62c6a2501a113ca2cf2629801"
+          ],
+          "relevant_positions": [
+            1
+          ]
+        },
+        {
+          "query_id": "q027",
+          "relevant_chunk_ids": [
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            3
+          ]
+        },
+        {
+          "query_id": "q028",
+          "relevant_chunk_ids": [
+            "095bea90981be2f628b628b97b576ea1ac923338e1fe005cedb92ce939047b16",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            2,
+            3
+          ]
+        },
+        {
+          "query_id": "q029",
+          "relevant_chunk_ids": [
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7",
+            "e2171bcf15a1be9f1c4e32682885e248b3fa2d4afa2151c8f418d70c7119300f"
+          ],
+          "relevant_positions": [
+            1,
+            10
+          ]
+        },
+        {
+          "query_id": "q030",
+          "relevant_chunk_ids": [
+            "580d888c7d8e420e15b63dcb6ab62939376f87543609c333c1f5977fcf866a06",
+            "b7df10b8feb4e3c01d76a65d3437813e55d9ef73ed51d31db4bdbf1d74c2b1e7"
+          ],
+          "relevant_positions": [
+            2,
+            3
+          ]
+        }
+      ]
+    }
+  }
+}

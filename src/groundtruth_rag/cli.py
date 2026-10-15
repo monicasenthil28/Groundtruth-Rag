@@ -745,6 +745,8 @@ def config_status_command(benchmark: str) -> None:
                f"Query baseline: {result['query_baseline']}\n"
                f"Previous: {result['previous'] or 'none'}\n"
                f"Rollback available: {'YES' if result['rollback_available'] else 'NO'}")
+    for name, status in result["versions"].items():
+        typer.echo(f"Version {name}: {status or 'unspecified'}")
 
 
 @app.command("evaluate-demo")

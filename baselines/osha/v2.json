@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.0",
+  "name": "osha-v2",
+  "promotion_provenance": {
+    "promotion_id": "osha-retrieval-v2",
+    "experiment_id": "osha-retrieval-v1",
+    "candidate_id": "rerank-pool-30",
+    "resolved_config_sha256": "207f6f4e538de4fe01eaebf54fed50bb0dd716ee109f7f4b133ee085431812e3"
+  },
+  "domain": "osha",
+  "created_at": "2026-10-15T15:05:53.024893Z",
+  "source_summary_schema_version": "1.0",
+  "corpus_fingerprint": "55bebfded1835db967ef9fed5688ff0d8ad919a42c308cbc555972419df3531e",
+  "dataset_sha256": "78dd4d33573577c9ce5b285699afea6c91ad6bfcce2499f8a629960cb058f85e",
+  "dataset_name": "eval.jsonl",
+  "query_count": 29,
+  "skipped_count": null,
+  "k_values": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "runs": {
+    "dense": {
+      "run_id": "2cff6238-dd98-4fd4-a353-5bedde50960e",
+      "metrics": {
+        "recall@1": 0.20689655172413793,
+        "precision@1": 0.3448275862068966,
+        "hit_rate@1": 0.3448275862068966,
+        "ndcg@1": 0.3448275862068966,
+        "recall@3": 0.46551724137931033,
+        "precision@3": 0.2528735632183908,
+        "hit_rate@3": 0.5862068965517241,
+        "ndcg@3": 0.41130358450222143,
+        "recall@5": 0.5172413793103449,
+        "precision@5": 0.1724137931034483,
+        "hit_rate@5": 0.6206896551724138,
+        "ndcg@5": 0.4286414293391367,
+        "recall@10": 0.8275862068965517,
+        "precision@10": 0.12413793103448277,
+        "hit_rate@10": 0.9310344827586207,
+        "ndcg@10": 0.5361424009460565,
+        "mrr": 0.4998905309250136
+      },
+      "latency": {
+        "mean_ms": 10.565941379385988,
+        "p50_ms": 9.136600001511397,
+        "p95_ms": 14.917920000516459
+      },
+      "configuration_name": "dense_minilm",
+      "package_version": "0.1.0",
+      "python_version": "3.11.9"
+    },
+    "bm25": {
+      "run_id": "2dd21df2-af26-43ec-8c68-16d28baae38a",
+      "metrics": {
+        "recall@1": 0.3793103448275862,
+        "precision@1": 0.5517241379310345,
+        "hit_rate@1": 0.5517241379310345,
+        "ndcg@1": 0.5517241379310345,
+        "recall@3": 0.5689655172413793,
+        "precision@3": 0.28735632183908044,
+        "hit_rate@3": 0.7241379310344828,
+        "ndcg@3": 0.5462253166945328,
+        "recall@5": 0.6724137931034483,
+        "precision@5": 0.2,
+        "hit_rate@5": 0.7931034482758621,
+        "ndcg@5": 0.5828266547682652,
+        "recall@10": 0.7672413793103449,
+        "precision@10": 0.11724137931034484,
+        "hit_rate@10": 0.8620689655172413,
+        "ndcg@10": 0.6195759652786325,
+        "mrr": 0.6518062397372743
+      },
+      "latency": {
+        "mean_ms": 0.3705862067802408,
+        "p50_ms": 0.3542000013112556,
+        "p95_ms": 0.497039999027038
+      },
+      "configuration_name": "bm25",
+      "package_version": "0.1.0",
+      "python_version": "3.11.9"
+    },
+    "hybrid": {
+      "run_id": "cfa500f7-a46b-4c2a-b02d-a01f497a0b58",
+      "metrics": {
+        "recall@1": 0.3448275862068966,
+        "precision@1": 0.5172413793103449,
+        "hit_rate@1": 0.5172413793103449,
+        "ndcg@1": 0.5172413793103449,
+        "recall@3": 0.5948275862068966,
+        "precision@3": 0.3103448275862069,
+        "hit_rate@3": 0.7241379310344828,
+        "ndcg@3": 0.5549295209640975,
+        "recall@5": 0.7413793103448276,
+        "precision@5": 0.22758620689655173,
+        "hit_rate@5": 0.8620689655172413,
+        "ndcg@5": 0.6102290258752738,
+        "recall@10": 0.7931034482758621,
+        "precision@10": 0.12413793103448277,
+        "hit_rate@10": 0.8620689655172413,
+        "ndcg@10": 0.6302366955436111,
+        "mrr": 0.6402298850574712
+      },
+      "latency": {
+        "mean_ms": 8.457068965385432,
+        "p50_ms": 8.362299999134848,
+        "p95_ms": 9.535580000738264
+      },
+      "configuration_name": "hybrid_rrf",
+      "package_version": "0.1.0",
+      "python_version": "3.11.9"
+    },
+    "hybrid_rerank": {
+      "run_id": "77dffe18-bded-407c-96bc-836df77a6f0d",
+      "metrics": {
+        "recall@1": 0.4827586206896552,
+        "precision@1": 0.6551724137931034,
+        "hit_rate@1": 0.6551724137931034,
+        "ndcg@1": 0.6551724137931034,
+        "recall@3": 0.853448275862069,
+        "precision@3": 0.41379310344827586,
+        "hit_rate@3": 0.9655172413793104,
+        "ndcg@3": 0.7763922081657023,
+        "recall@5": 0.8706896551724138,
+        "precision@5": 0.25517241379310346,
+        "hit_rate@5": 0.9655172413793104,
+        "ndcg@5": 0.7752633249948638,
+        "recall@10": 0.9396551724137931,
+        "precision@10": 0.14482758620689656,
+        "hit_rate@10": 0.9655172413793104,
+        "ndcg@10": 0.8046178250328164,
+        "mrr": 0.7988505747126436
+      },
+      "latency": {
+        "mean_ms": 1249.3059034483756,
+        "p50_ms": 1285.0655999991432,
+        "p95_ms": 1416.0299200008012
+      },
+      "configuration_name": "rerank-pool-30",
+      "package_version": "0.1.0",
+      "python_version": "3.11.9"
+    }
+  }
+}

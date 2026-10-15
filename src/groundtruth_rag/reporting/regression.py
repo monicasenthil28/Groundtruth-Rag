@@ -20,6 +20,13 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class PromotionProvenance(StrictModel):
+    promotion_id: str = Field(min_length=1)
+    experiment_id: str = Field(min_length=1)
+    candidate_id: str = Field(min_length=1)
+    resolved_config_sha256: str = Field(min_length=64, max_length=64)
+
+
 class Aggregate(StrictModel):
     run_id: str = Field(min_length=1)
     metrics: dict[str, FiniteFloat]
@@ -73,6 +80,7 @@ class Baseline(StrictModel):
     skipped_count: int | None = Field(default=None, ge=0)
     k_values: list[int]
     runs: dict[str, Aggregate]
+    promotion_provenance: PromotionProvenance | None = None
 
     @model_validator(mode="after")
     def valid_baseline(self) -> "Baseline":
@@ -201,13 +209,15 @@ def load_summary(path: Path) -> BenchmarkSummary:
 
 
 def create_baseline(summary_path: Path, output: Path, name: str, *, domain: str | None = None,
-                    force: bool = False) -> Baseline:
+                    force: bool = False,
+                    promotion_provenance: PromotionProvenance | None = None) -> Baseline:
     summary = load_summary(summary_path)
     baseline = Baseline(
         name=name, domain=domain or summary_path.parent.name,
         created_at=datetime.now(timezone.utc), corpus_fingerprint=summary.corpus_fingerprint,
         dataset_sha256=summary.dataset_sha256, dataset_name=Path(summary.dataset).name,
         query_count=summary.query_count, k_values=summary.k_values, runs=summary.runs,
+        promotion_provenance=promotion_provenance,
     )
     content = baseline.model_dump_json(indent=2) + "\n"
     if force:

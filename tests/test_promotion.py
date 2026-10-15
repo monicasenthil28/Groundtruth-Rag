@@ -217,7 +217,12 @@ def test_activation_and_rollback_preserve_v2(tmp_path, monkeypatch):
     promotion.save_manifest(path, manifest)
     output = root / manifest.target.benchmark_output
     aggregate = create_baseline(output / "summary.json", root / manifest.target.aggregate_baseline,
-                                "osha-v2", domain="osha")
+                                "osha-v2", domain="osha",
+                                promotion_provenance=promotion.PromotionProvenance(
+                                    promotion_id=manifest.promotion_id,
+                                    experiment_id=manifest.candidate.experiment_id,
+                                    candidate_id=manifest.candidate.candidate_id,
+                                    resolved_config_sha256=manifest.source.resolved_config_sha256))
     create_query_baseline(output / "summary.json", aggregate, root / manifest.target.query_baseline)
     registry = promotion.load_registry(root / manifest.target.registry)
     registry.versions["v2"].baseline = manifest.target.aggregate_baseline
@@ -314,11 +319,40 @@ def test_baseline_pair_generated_from_four_runs(tmp_path, monkeypatch):
     report_path = root / manifest.target.promotion_output / "validation.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps({"status": "PASS", "run_ids": run_ids}), encoding="utf-8")
+    regression_path = report_path.parent / "regression.json"
+    regression_path.write_text(json.dumps({
+        "overall_status": "PASS", "corpus_fingerprint": "fingerprint",
+        "dataset_sha256": "dataset", "query_analysis": {"retrievers": {
+            name: {"new_failures": {"3": []}} for name in run_ids}}}), encoding="utf-8")
     baselined = promotion.baseline_version(root, path)
     assert baselined.state == "BASELINED"
     assert (root / baselined.target.aggregate_baseline).is_file()
     assert (root / baselined.target.query_baseline).is_file()
+    aggregate = promotion.load_baseline(root / baselined.target.aggregate_baseline)
+    query = promotion.load_query_baseline(root / baselined.target.query_baseline)
+    assert aggregate.promotion_provenance == query.promotion_provenance
+    assert aggregate.promotion_provenance.promotion_id == "osha-v2"
+    assert aggregate.promotion_provenance.resolved_config_sha256 == baselined.source.resolved_config_sha256
     assert promotion.load_registry(root / baselined.target.registry).active == "v1"
+    assert promotion.config_status(root, "osha")["versions"]["v2"] == "baselined"
     assert (root / "baselines/osha/v1.json").read_text() == "{}"
     with pytest.raises(ValueError, match="validation must PASS"):
         promotion.baseline_version(root, path)
+
+
+def test_missing_validation_regression_refuses_baseline(tmp_path, monkeypatch):
+    root, path, run, _ = fixture(tmp_path, monkeypatch)
+    promotion.check(root, path)
+    promotion.approve(root, path)
+    promotion.apply(root, path)
+    manifest = promotion.load_manifest(path)
+    manifest.state = "VALIDATED"
+    manifest.validation_run_ids = write_four_run_benchmark(root, manifest, run)
+    promotion.save_manifest(path, manifest)
+    report_path = root / manifest.target.promotion_output / "validation.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps({"status": "PASS", "run_ids": manifest.validation_run_ids}))
+    with pytest.raises(OSError):
+        promotion.baseline_version(root, path)
+    assert not (root / manifest.target.aggregate_baseline).exists()
+    assert promotion.load_registry(root / manifest.target.registry).active == "v1"
