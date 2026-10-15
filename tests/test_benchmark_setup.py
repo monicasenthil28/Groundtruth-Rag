@@ -66,8 +66,9 @@ def package(tmp_path: Path, monkeypatch):
                 "corpus_fingerprint": corpus_fingerprint(chunks),
                 "dataset_sha256": digest, "dataset_name": "eval.jsonl", "query_count": 29,
                 "k_values": [1, 3, 5, 10],
-                "runs": {"dense": {"run_id": "test", "metrics": {"mrr": 1.0},
-                                   "latency": {"mean_ms": 1.0, "p50_ms": 1.0, "p95_ms": 1.0}}}}
+                "runs": {name: {"run_id": f"test-{name}", "metrics": {"mrr": 1.0},
+                               "latency": {"mean_ms": 1.0, "p50_ms": 1.0, "p95_ms": 1.0}}
+                         for name in ("dense", "bm25", "hybrid", "hybrid_rerank")}}
     baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
     data = {"schema_version": "1.0", "benchmark_id": "osha", "title": "OSHA 3120 Lockout/Tagout",
             "source": {"document": "osha3120.pdf",
@@ -84,6 +85,12 @@ def package(tmp_path: Path, monkeypatch):
             "baseline": "baselines/osha/v1.json"}
     spec_path = golden / "benchmark.yaml"
     spec_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    configs = root / "configs"
+    configs.mkdir()
+    for name in data["retriever_configs"]:
+        (configs / f"{name}.yaml").write_text(yaml.safe_dump({"name": name,
+                                                                "retriever": {"type": name}}),
+                                                  encoding="utf-8")
     return root, source, data, spec_path
 
 
@@ -180,6 +187,10 @@ def test_missing_chunk_rejected(package):
     data = json.loads(review.read_text(encoding="utf-8"))
     data["dataset_sha256"] = file_sha256(dataset)
     review.write_text(json.dumps(data), encoding="utf-8")
+    baseline = root / spec.baseline
+    baseline_data = json.loads(baseline.read_text(encoding="utf-8"))
+    baseline_data["dataset_sha256"] = data["dataset_sha256"]
+    baseline.write_text(json.dumps(baseline_data), encoding="utf-8")
     with pytest.raises(ValueError, match="missing relevant chunks"):
         validate_golden(root, spec, benchmark_paths(root)[1])
 
@@ -310,7 +321,8 @@ def test_local_pdf_clean_room(tmp_path: Path):
     if not source.exists():
         pytest.skip("local OSHA PDF is not available")
     spec = load_spec(original / "benchmarks/osha/benchmark.yaml")
-    for relative in (spec.golden.dataset, spec.golden.review_manifest, spec.baseline):
+    for relative in (spec.golden.dataset, spec.golden.review_manifest, spec.baseline,
+                     *spec.retriever_configs.values()):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(original / relative, target)

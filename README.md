@@ -104,3 +104,9 @@ Full benchmark reports are local under `reports/benchmarks/osha/`; the committed
 4. Inspect `regression.json` and `REGRESSION.md` for PASS/WARN/FAIL per metric and retriever. FAIL exits nonzero; WARN exits zero unless `--fail-on-warn` is set.
 
 Comparison rejects incompatible corpus fingerprints, dataset hashes, query counts, retrievers, or required K values. The OSHA policy disables latency gating by default because timing depends on hardware and runtime conditions; measured latency remains visible in reports. See [regression guidance](docs/REGRESSION.md).
+
+## Continuous Integration
+
+Pull requests and pushes to `main` run tests, Ruff, `compileall`, CLI smoke checks, `groundtruth benchmark-verify osha`, and a synthetic regression gate. The normal CI workflow uses `.[dev]`; it does **not** download the OSHA PDF or model weights. The synthetic PASS/WARN/FAIL fixtures exercise the regression engine, not real retrieval quality.
+
+The full OSHA benchmark runs only through the manual GitHub Actions workflow. It verifies the pinned public source, rebuilds the corpus, runs neural retrieval, and compares the result with baseline v1. It is manual because model downloads and benchmark execution take longer, OSHA hosting can be unavailable, and runner latency varies. Reports are uploaded as artifacts; the raw PDF, generated corpus, and model files are not. A source download failure stops the workflow rather than substituting another revision.

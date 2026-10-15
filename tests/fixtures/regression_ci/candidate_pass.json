@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "corpus_fingerprint": "synthetic-ci-corpus-v1",
+  "dataset": "synthetic-ci-regression/eval.jsonl",
+  "dataset_sha256": "synthetic-ci-dataset-v1",
+  "query_count": 1,
+  "k_values": [3],
+  "runs": {
+    "dense": {
+      "run_id": "synthetic-pass",
+      "metrics": {"recall@3": 0.8},
+      "latency": {"mean_ms": 10.0, "p50_ms": 10.0, "p95_ms": 10.0}
+    }
+  }
+}

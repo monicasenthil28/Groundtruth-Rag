@@ -1,0 +1,92 @@
+name: Groundtruth-Rag CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Tests
+        id: tests
+        run: python -m pytest
+      - name: Ruff
+        id: ruff
+        run: ruff check .
+      - name: Compile
+        id: compile
+        run: python -m compileall src
+      - name: CLI smoke
+        id: cli
+        run: |
+          groundtruth --help
+          groundtruth version
+      - name: Quality summary
+        if: always()
+        run: |
+          status() { case "$1" in success) printf PASS;; failure) printf FAIL;; *) printf SKIPPED;; esac; }
+          {
+            echo '# Groundtruth-Rag CI'
+            echo
+            echo "- Tests: $(status '${{ steps.tests.outcome }}')"
+            echo "- Ruff: $(status '${{ steps.ruff.outcome }}')"
+            echo "- Compile: $(status '${{ steps.compile.outcome }}')"
+            echo "- CLI smoke: $(status '${{ steps.cli.outcome }}')"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  regression-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Verify committed OSHA benchmark package
+        id: integrity
+        run: groundtruth benchmark-verify osha
+      - name: Exercise synthetic regression fixtures
+        id: fixtures
+        run: python scripts/ci_regression_check.py
+      - name: Regression summary
+        if: always()
+        run: |
+          status() { case "$1" in success) printf PASS;; failure) printf FAIL;; *) printf SKIPPED;; esac; }
+          {
+            echo '## Benchmark and Regression Checks'
+            echo
+            echo "- Benchmark package integrity: $(status '${{ steps.integrity.outcome }}')"
+            echo "- Synthetic regression gate: $(status '${{ steps.fixtures.outcome }}')"
+            if [ -f reports/ci/fixture-summary.md ]; then
+              echo
+              cat reports/ci/fixture-summary.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload synthetic regression reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: groundtruth-ci-regression-reports
+          path: reports/ci/
+          if-no-files-found: ignore
+          retention-days: 30

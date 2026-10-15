@@ -17,6 +17,7 @@ from groundtruth_rag.ingestion.pipeline import ingest
 from groundtruth_rag.labeling.manifest import INGESTION_VERSION, CorpusManifest, file_sha256
 from groundtruth_rag.labeling.models import atomic_write
 from groundtruth_rag.reporting.regression import load_baseline
+from groundtruth_rag.retrieval.factory import load_config
 from groundtruth_rag.retrieval.dense import corpus_fingerprint
 
 
@@ -138,7 +139,8 @@ def _check_corpus(corpus: Path, manifest_path: Path, spec: BenchmarkSpec) -> Cor
     return manifest
 
 
-def validate_golden(root: Path, spec: BenchmarkSpec, corpus: Path) -> int:
+def verify_benchmark_package(root: Path, spec: BenchmarkSpec) -> int:
+    """Check committed benchmark inputs without source, corpus, network, or models."""
     dataset_path = root / spec.golden.dataset
     review_path = root / spec.golden.review_manifest
     labels = load_dataset(dataset_path)
@@ -154,20 +156,31 @@ def validate_golden(root: Path, spec: BenchmarkSpec, corpus: Path) -> int:
     ):
         if actual != expected:
             raise ValueError(f"{label} mismatch: expected {expected}, got {actual}")
-    chunk_ids = {chunk.chunk_id for chunk in load_corpus(corpus)}
     for label in labels:
         if label.query_id in spec.golden.skipped_ids:
             raise ValueError(f"skipped query in golden dataset: {label.query_id}")
         if not label.reference_answer or not label.reference_answer.strip() or not label.tags:
             raise ValueError(f"{label.query_id}: reference answer and tags required")
+    baseline = load_baseline(root / spec.baseline)
+    if (baseline.query_count != len(labels) or baseline.corpus_fingerprint != spec.corpus.fingerprint
+            or baseline.dataset_sha256 != review.dataset_sha256 or baseline.k_values != spec.k_values
+            or baseline.dataset_name != dataset_path.name or set(baseline.runs) != set(spec.retriever_configs)):
+        raise ValueError("baseline incompatible with benchmark specification or golden dataset")
+    for name, relative_path in spec.retriever_configs.items():
+        config = load_config(root / relative_path)
+        if config.retriever.type != name:
+            raise ValueError(f"{name}: retriever config type mismatch")
+    return len(labels)
+
+
+def validate_golden(root: Path, spec: BenchmarkSpec, corpus: Path) -> int:
+    count = verify_benchmark_package(root, spec)
+    chunk_ids = {chunk.chunk_id for chunk in load_corpus(corpus)}
+    for label in load_dataset(root / spec.golden.dataset):
         unknown = label.relevant_chunk_ids - chunk_ids
         if unknown:
             raise ValueError(f"{label.query_id}: missing relevant chunks: {', '.join(sorted(unknown))}")
-    baseline = load_baseline(root / spec.baseline)
-    if (baseline.query_count != len(labels) or baseline.corpus_fingerprint != spec.corpus.fingerprint
-            or baseline.dataset_sha256 != review.dataset_sha256 or baseline.k_values != spec.k_values):
-        raise ValueError("baseline incompatible with benchmark specification or golden dataset")
-    return len(labels)
+    return count
 
 
 def setup_benchmark(root: Path, spec: BenchmarkSpec, supplied_source: Path | None = None,

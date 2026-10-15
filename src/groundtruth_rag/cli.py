@@ -12,7 +12,7 @@ from rich.table import Table
 from groundtruth_rag import __version__
 from groundtruth_rag.benchmark_setup import (
     benchmark_status as inspect_benchmark, load_spec, setup_benchmark,
-    validate_golden,
+    validate_golden, verify_benchmark_package,
 )
 from groundtruth_rag.datasets import DatasetValidationError, load_dataset, tag_counts
 from groundtruth_rag.evaluation.runner import BenchmarkRun, evaluate_retriever
@@ -344,6 +344,21 @@ def benchmark_status_command(benchmark_id: str) -> None:
     for error in status["errors"]:
         typer.echo(f"Mismatch: {error}", err=True)
     typer.echo(f"Ready to benchmark: {'YES' if status['ready'] else 'NO'}")
+
+
+@app.command("benchmark-verify")
+def benchmark_verify_command(benchmark_id: str) -> None:
+    """Verify versioned benchmark inputs without a source PDF or corpus."""
+    if benchmark_id != "osha":
+        raise typer.BadParameter("only osha is supported")
+    root = Path(__file__).resolve().parents[2]
+    try:
+        spec = load_spec(root / "benchmarks/osha/benchmark.yaml")
+        count = verify_benchmark_package(root, spec)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Benchmark package integrity: FAIL: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Benchmark package integrity: PASS; benchmark: {spec.benchmark_id}; queries: {count}")
 
 
 @app.command("baseline-create")

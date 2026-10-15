@@ -21,3 +21,4 @@ datasets/osha/eval.jsonl
 datasets/osha/*.progress.json
 reports/tmp/
 reports/drafts/
+reports/ci/

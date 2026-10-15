@@ -1,0 +1,97 @@
+name: Full OSHA Retrieval Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      fail_on_warn:
+        description: Fail the run on a regression warning
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,models]"
+      - name: Acquire and verify pinned OSHA source
+        id: setup
+        shell: bash
+        run: |
+          if ! groundtruth benchmark-setup osha > "$RUNNER_TEMP/osha-setup.log" 2>&1; then
+            cat "$RUNNER_TEMP/osha-setup.log"
+            if grep -Eqi 'HTTP Error|urlopen|timed out|Temporary failure|Name or service not known|Failed to establish|nodename nor servname' "$RUNNER_TEMP/osha-setup.log"; then
+              echo 'SOURCE_UNAVAILABLE: Official OSHA source could not be acquired. Re-run locally with groundtruth benchmark-setup osha --source <verified PDF>.'
+            fi
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/osha-setup.log"
+      - name: Check benchmark readiness
+        id: status
+        run: groundtruth benchmark-status osha
+      - name: Run real OSHA retrieval benchmark
+        id: benchmark
+        run: groundtruth benchmark-osha
+      - name: Compare with baseline v1
+        id: regression
+        env:
+          FAIL_ON_WARN: ${{ inputs.fail_on_warn }}
+        shell: bash
+        run: |
+          args=(--baseline baselines/osha/v1.json --candidate reports/benchmarks/osha/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest)
+          if [ "$FAIL_ON_WARN" = true ]; then
+            args+=(--fail-on-warn)
+          fi
+          groundtruth regress "${args[@]}"
+      - name: Benchmark summary
+        if: always()
+        run: |
+          status() { case "$1" in success) printf PASS;; failure) printf FAIL;; *) printf SKIPPED;; esac; }
+          {
+            echo '# Full OSHA Retrieval Benchmark'
+            echo
+            echo "- Source setup: $(status '${{ steps.setup.outcome }}')"
+            echo "- Readiness: $(status '${{ steps.status.outcome }}')"
+            echo "- Benchmark execution: $(status '${{ steps.benchmark.outcome }}')"
+            echo "- Regression command exit: $(status '${{ steps.regression.outcome }}')"
+            if [ -f reports/regressions/osha/latest/regression.json ]; then
+              echo "- Regression result: $(python -c 'import json; print(json.load(open("reports/regressions/osha/latest/regression.json", encoding="utf-8"))["overall_status"])')"
+            else
+              echo '- Regression result: NOT RUN'
+            fi
+            if [ -f reports/benchmarks/osha/SUMMARY.md ]; then
+              echo
+              cat reports/benchmarks/osha/SUMMARY.md
+            fi
+            if [ -f reports/regressions/osha/latest/REGRESSION.md ]; then
+              echo
+              cat reports/regressions/osha/latest/REGRESSION.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload benchmark and regression reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: osha-retrieval-benchmark-${{ github.run_id }}
+          path: |
+            reports/benchmarks/osha/summary.json
+            reports/benchmarks/osha/SUMMARY.md
+            reports/benchmarks/osha/error_analysis.json
+            reports/regressions/osha/latest/regression.json
+            reports/regressions/osha/latest/REGRESSION.md
+          if-no-files-found: ignore
+          retention-days: 30

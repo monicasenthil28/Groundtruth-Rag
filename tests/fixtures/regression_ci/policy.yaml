@@ -1,0 +1,6 @@
+schema_version: "1.0"
+retrievers: [dense]
+quality:
+  recall@3:
+    warn_drop: 0.05
+    fail_drop: 0.10

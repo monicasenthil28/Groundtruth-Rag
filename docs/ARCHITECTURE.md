@@ -34,8 +34,26 @@ PASS / WARN / FAIL
 - **Reporting:** The runner emits versioned JSON with per-query hits, metrics, latency, and run configuration. The aggregate baseline contains no source text or relevance labels. Regression reports contain metric deltas, compatibility checks, and PASS/WARN/FAIL decisions.
 - **Regression testing:** Compare a candidate summary to a versioned baseline after corpus, dataset, query-count, retriever, metric, and K compatibility checks. Quality uses absolute-drop thresholds; latency uses independently configurable relative-increase thresholds. No composite score is used.
 
-The CLI provides `--help`, `version`, `ingest`, `prepare-osha`, `label`, `label-status`, `audit-dataset`, `export-review`, `benchmark-setup`, `benchmark-status`, `benchmark-osha`, `baseline-create`, `regress`, `validate-dataset`, `evaluate`, `evaluate-demo`, and `compare`. `benchmark-osha` refuses to run until the pinned source, corpus, committed golden dataset, and baseline are compatible. The older `--questions` path still audits local review progress when explicitly supplied. `evaluate-demo` uses fixed synthetic rankings only. Generation evaluation remains future work.
+The CLI provides `--help`, `version`, `ingest`, `prepare-osha`, `label`, `label-status`, `audit-dataset`, `export-review`, `benchmark-setup`, `benchmark-status`, `benchmark-verify`, `benchmark-osha`, `baseline-create`, `regress`, `validate-dataset`, `evaluate`, `evaluate-demo`, and `compare`. `benchmark-osha` refuses to run until the pinned source, corpus, committed golden dataset, and baseline are compatible. The older `--questions` path still audits local review progress when explicitly supplied. `evaluate-demo` uses fixed synthetic rankings only. Generation evaluation remains future work.
 
 Golden queries are stored as JSONL, one `EvalQuery` per line. Raw records are checked before Pydantic converts relevance IDs to a set, so duplicate IDs cannot disappear during parsing. The demo corpus and rankings exist solely to exercise the engine offline. `schema_version` in run JSON makes future format migration explicit.
 
 Chunk-level relevance IDs are tied to one chunking configuration. Keep chunk size and overlap fixed in comparisons until source-span judgments or relabeling are available. See [retrieval design](RETRIEVAL.md).
+
+## Validation Paths
+
+```text
+Code Change
+   |
+   +--> Deterministic CI (PR / main push)
+   |      Tests + Ruff + compileall
+   |      Committed benchmark metadata integrity
+   |      Synthetic PASS / WARN / FAIL regression gate
+   |
+   +--> Manual full OSHA benchmark
+          Hash-verified source and corpus rebuild
+          Real retrieval benchmark
+          Regression against baseline v1
+```
+
+The automatic path needs neither the PDF nor neural model weights. The manual path uploads aggregate benchmark and regression reports, never raw source or corpus text.

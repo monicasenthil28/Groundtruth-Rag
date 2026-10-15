@@ -10,4 +10,6 @@ Latency is sensitive to hardware, warmup, background load, and runtime versions.
 
 Exit codes: PASS is 0, WARN is 0 by default (1 with `--fail-on-warn`), FAIL is 1, and invalid or incompatible input is 2. The CLI writes `regression.json` and `REGRESSION.md` after compatibility succeeds, including WARN and FAIL results. It never edits golden labels.
 
-The baseline and candidate must use the same fixed chunking and human-reviewed dataset. Different corpora, changed relevance judgments, or changed query sets require a new baseline. Per-query rank-change analysis and CI enforcement are left for later work; this phase does not evaluate generation or unanswerable queries.
+The baseline and candidate must use the same fixed chunking and human-reviewed dataset. Different corpora, changed relevance judgments, or changed query sets require a new baseline. Per-query rank-change analysis is left for later work; this phase does not evaluate generation or unanswerable queries.
+
+CI exercises the CLI with committed synthetic PASS, WARN, and FAIL candidates. It checks the default WARN exit code (0), strict `--fail-on-warn` exit code (1), and FAIL exit code (1), and uploads machine-readable `regression.json` plus Markdown reports. These fixtures are regression-engine checks, **not** real benchmark evidence. The separate manual OSHA workflow runs retrieval and compares its candidate with baseline v1. Its job summary preserves WARN or FAIL as reported; an optional dispatch input enables strict WARN failure.

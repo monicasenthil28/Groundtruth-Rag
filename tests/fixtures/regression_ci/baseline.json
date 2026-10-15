@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "name": "synthetic-ci-regression-v1",
+  "domain": "synthetic-ci-regression",
+  "created_at": "2026-01-01T00:00:00Z",
+  "source_summary_schema_version": "1.0",
+  "corpus_fingerprint": "synthetic-ci-corpus-v1",
+  "dataset_sha256": "synthetic-ci-dataset-v1",
+  "dataset_name": "eval.jsonl",
+  "query_count": 1,
+  "k_values": [3],
+  "runs": {
+    "dense": {
+      "run_id": "synthetic-baseline",
+      "metrics": {"recall@3": 0.8},
+      "latency": {"mean_ms": 10.0, "p50_ms": 10.0, "p95_ms": 10.0}
+    }
+  }
+}
