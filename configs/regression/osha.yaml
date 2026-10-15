@@ -1,0 +1,22 @@
+schema_version: "1.0"
+retrievers:
+  - dense
+  - bm25
+  - hybrid
+  - hybrid_rerank
+quality:
+  recall@3:
+    warn_drop: 0.02
+    fail_drop: 0.03
+  mrr:
+    warn_drop: 0.02
+    fail_drop: 0.03
+  ndcg@3:
+    warn_drop: 0.02
+    fail_drop: 0.03
+latency:
+  p95_ms:
+    enabled: false
+    warn_increase_pct: 25
+    fail_increase_pct: 50
+per_retriever: {}

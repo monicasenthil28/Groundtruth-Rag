@@ -4,7 +4,7 @@
 
 Groundtruth-Rag is a domain-agnostic foundation for comparing retrieval architectures against a human-verified golden dataset. It is intended to make changes to chunking, embeddings, retrieval, and reranking measurable instead of relying on subjective chatbot testing.
 
-The supported comparison is **Dense** vs **Dense + BM25** vs **Dense + BM25 + CrossEncoder**. BM25 is also available as a standalone configuration. No real benchmark has been run yet.
+The supported comparison is **Dense** vs **Dense + BM25** vs **Dense + BM25 + CrossEncoder**. BM25 is also available as a standalone configuration. A human-reviewed OSHA retrieval benchmark has been run locally; regression baselines preserve its aggregate measurements without including source text or labels.
 
 ## Current Scope
 
@@ -78,8 +78,17 @@ The OSHA corpus and in-progress/final local labels are ignored to keep source te
 
 ## OSHA Benchmark
 
-OSHA benchmark results have not been generated. The raw PDF, canonical corpus, and human-reviewed labels are local artifacts excluded from tooling commits; follow the review and audit gates above before benchmarking.
+The local OSHA benchmark uses 29 verified answerable queries; q013 was explicitly skipped and excluded from retrieval metrics. The raw PDF, canonical corpus, golden labels, and full benchmark runs remain local artifacts. The versioned aggregate baseline is [baselines/osha/v1.json](baselines/osha/v1.json).
 
 ## Benchmark Results
 
-Benchmark pending — results will be generated from the real evaluation dataset.
+Full benchmark reports are local under `reports/benchmarks/osha/`; the committed baseline contains only aggregates and provenance, not source passages or golden labels.
+
+## Retrieval Regression Testing
+
+1. Run and audit a benchmark, then save its aggregate baseline: `groundtruth baseline-create --summary reports/benchmarks/osha/summary.json --output baselines/osha/v1.json --name osha-v1`. Existing baselines are protected; use `--force` only for an intentional replacement.
+2. Change the retrieval implementation or configuration, then run a new candidate benchmark with the same corpus, golden dataset, and required K values.
+3. Compare: `groundtruth regress --baseline baselines/osha/v1.json --candidate path/to/candidate/summary.json --policy configs/regression/osha.yaml --output reports/regressions/osha/latest`.
+4. Inspect `regression.json` and `REGRESSION.md` for PASS/WARN/FAIL per metric and retriever. FAIL exits nonzero; WARN exits zero unless `--fail-on-warn` is set.
+
+Comparison rejects incompatible corpus fingerprints, dataset hashes, query counts, retrievers, or required K values. The OSHA policy disables latency gating by default because timing depends on hardware and runtime conditions; measured latency remains visible in reports. See [regression guidance](docs/REGRESSION.md).

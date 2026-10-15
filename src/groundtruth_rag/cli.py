@@ -24,6 +24,10 @@ from groundtruth_rag.labeling.review import export_review as write_review, label
 from groundtruth_rag.labeling.session import LabelSession, load_session
 from groundtruth_rag.reporting.benchmark import summarize_runs
 from groundtruth_rag.reporting.compare import compare_runs
+from groundtruth_rag.reporting.regression import (
+    compare as compare_regression, create_baseline, load_baseline, load_policy,
+    load_summary, write_report,
+)
 from groundtruth_rag.retrieval.bm25 import BM25Retriever
 from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
@@ -283,6 +287,53 @@ def benchmark_osha(
         typer.echo(f"Benchmark blocked or failed: {exc}", err=True)
         raise typer.Exit(1) from exc
     typer.echo(f"Benchmark results: {output_dir}; verified questions: {report.verified_count}")
+
+
+@app.command("baseline-create")
+def baseline_create(
+    summary: Path = typer.Option(..., "--summary"),
+    output: Path = typer.Option(..., "--output"),
+    name: str = typer.Option(..., "--name"),
+    domain: str | None = typer.Option(None, "--domain"),
+    force: bool = typer.Option(False, "--force"),
+) -> None:
+    """Capture validated aggregate results without rerunning retrieval."""
+    try:
+        if output.resolve() == summary.resolve():
+            raise ValueError("baseline output must differ from benchmark summary")
+        baseline = create_baseline(summary, output, name, domain=domain, force=force)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Baseline creation failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Baseline: {output}; queries: {baseline.query_count}")
+
+
+@app.command()
+def regress(
+    baseline: Path = typer.Option(..., "--baseline"),
+    candidate: Path = typer.Option(..., "--candidate"),
+    policy: Path = typer.Option(..., "--policy"),
+    output: Path = typer.Option(..., "--output"),
+    fail_on_warn: bool = typer.Option(False, "--fail-on-warn"),
+) -> None:
+    """Compare a candidate benchmark with a versioned baseline."""
+    try:
+        base = load_baseline(baseline)
+        current = load_summary(candidate)
+        rules = load_policy(policy)
+        report = compare_regression(base, current, rules)
+        report["candidate_summary"] = str(candidate)
+        _, markdown_path = write_report(report, output)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(f"Regression comparison failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"{base.domain} Retrieval Regression; baseline: {base.name}; "
+               f"candidate queries: {current.query_count}")
+    for name, status in report["retriever_status"].items():
+        typer.echo(f"{name}: {status}")
+    typer.echo(f"Overall: {report['overall_status']}; report: {markdown_path}")
+    if report["overall_status"] == "FAIL" or (fail_on_warn and report["overall_status"] == "WARN"):
+        raise typer.Exit(1)
 
 
 @app.command("evaluate-demo")
