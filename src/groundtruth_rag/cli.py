@@ -30,7 +30,7 @@ from groundtruth_rag.labeling.session import LabelSession, load_session
 from groundtruth_rag.reporting.benchmark import summarize_runs
 from groundtruth_rag.reporting.compare import compare_runs
 from groundtruth_rag.reporting.regression import (
-    compare as compare_regression, create_baseline, load_baseline, load_policy,
+    apply_query_gate, compare as compare_regression, create_baseline, load_baseline, load_policy,
     load_summary, write_report,
 )
 from groundtruth_rag.reporting.query_regression import (
@@ -39,6 +39,7 @@ from groundtruth_rag.reporting.query_regression import (
 from groundtruth_rag.reporting.forensics import (
     analyze_forensics, load_forensics, load_run as load_forensics_run, write_forensics,
 )
+from groundtruth_rag.experiments import load_experiment_report, run_experiment
 from groundtruth_rag.retrieval.bm25 import BM25Retriever
 from groundtruth_rag.retrieval.dense import DenseRetriever
 from groundtruth_rag.retrieval.factory import build_retriever, load_config
@@ -429,24 +430,7 @@ def regress(
                 warn_rank_drop=rules.query_regression.warn_rank_drop,
             )
             report["query_analysis"] = analysis
-            query_rules = rules.query_regression
-            if query_rules.enabled:
-                new_count = sum(len(data["new_failures"][str(k)])
-                                for data in analysis["retrievers"].values()
-                                for k in query_rules.critical_k)
-                severity = "PASS"
-                if ((query_rules.fail_on_new_failure_at_k and new_count > 0)
-                        or (query_rules.max_new_failures_fail is not None
-                            and new_count > query_rules.max_new_failures_fail)):
-                    severity = "FAIL"
-                elif ((query_rules.max_new_failures_warn is not None
-                       and new_count > query_rules.max_new_failures_warn)
-                      or any(row["severity"] == "WARN" for data in analysis["retrievers"].values()
-                             for row in data["queries"])):
-                    severity = "WARN"
-                report["query_gate_status"] = severity
-                if severity == "FAIL" or (severity == "WARN" and report["overall_status"] == "PASS"):
-                    report["overall_status"] = severity
+            apply_query_gate(report, analysis, rules.query_regression)
         elif rules.query_regression.enabled:
             raise ValueError("query regression policy requires --query-baseline")
         report["candidate_summary"] = str(candidate)
@@ -520,6 +504,51 @@ def failure_inspect(path: Path, query: str = typer.Option(..., "--query")) -> No
         rank = record.first_relevant_rank[stage]
         typer.echo(f"{stage} first relevant: {rank if rank is not None else 'not established within saved depth'}")
     typer.echo(f"Flags: {', '.join(record.flags) or 'none'}")
+
+
+@app.command("experiment-run")
+def experiment_run(
+    specification: Path,
+    output: Path = typer.Option(..., "--output"),
+    candidate: str | None = typer.Option(None, "--candidate"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """Validate or run fixed-benchmark retrieval candidates."""
+    try:
+        root = Path(__file__).resolve().parents[2]
+        result = run_experiment(root, specification, output, candidate_id=candidate,
+                                dry_run=dry_run)
+    except (OSError, ValueError, RuntimeError, ValidationError) as exc:
+        typer.echo(f"Experiment failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if dry_run:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        typer.echo(f"Experiment report: {output / 'EXPERIMENT.md'}")
+        for row in result["candidates"]:
+            typer.echo(f"{row['candidate_id']}: {row['regression_status']}; "
+                       f"{row['pareto']}; {row['promotion_status']}")
+
+
+@app.command("experiment-inspect")
+def experiment_inspect(path: Path, candidate: str = typer.Option(..., "--candidate")) -> None:
+    """Inspect one advisory candidate decision without rerunning retrieval."""
+    try:
+        report = load_experiment_report(path)
+        row = next((item for item in report["candidates"]
+                    if item["candidate_id"] == candidate), None)
+        if row is None:
+            raise ValueError(f"candidate not found: {candidate}")
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Experiment inspection failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Candidate: {candidate}\nStatus: {row['promotion_status']}\n"
+               f"Regression: {row['regression_status']}\nPareto: {row['pareto']}")
+    for metric in ("recall@3", "mrr", "ndcg@3"):
+        old, new = row["baseline_metrics"][metric], row["metrics"][metric]
+        typer.echo(f"{metric}: baseline {old:.4f}; candidate {new:.4f}; delta {new - old:+.4f}")
+    typer.echo(f"New critical query failures: {row['new_critical_failures']}")
+    typer.echo(f"Forensics: {row['forensics_status']}")
 
 
 @app.command("evaluate-demo")

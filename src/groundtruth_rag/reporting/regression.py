@@ -318,6 +318,27 @@ def compare(baseline: Baseline, candidate: BenchmarkSummary,
     }
 
 
+def apply_query_gate(report: dict, analysis: dict, rules: QueryRegressionPolicy) -> None:
+    """Optionally combine query diagnostics with the aggregate gate."""
+    if not rules.enabled:
+        return
+    new_count = sum(len(data["new_failures"][str(k)])
+                    for data in analysis["retrievers"].values() for k in rules.critical_k)
+    severity = "PASS"
+    if ((rules.fail_on_new_failure_at_k and new_count > 0)
+            or (rules.max_new_failures_fail is not None
+                and new_count > rules.max_new_failures_fail)):
+        severity = "FAIL"
+    elif ((rules.max_new_failures_warn is not None
+           and new_count > rules.max_new_failures_warn)
+          or any(row["severity"] == "WARN" for data in analysis["retrievers"].values()
+                 for row in data["queries"])):
+        severity = "WARN"
+    report["query_gate_status"] = severity
+    if severity == "FAIL" or (severity == "WARN" and report["overall_status"] == "PASS"):
+        report["overall_status"] = severity
+
+
 def render_markdown(report: dict) -> str:
     rows = report["details"]
     by_key = {(row["retriever"], row["metric"]): row for row in rows}

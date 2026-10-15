@@ -117,6 +117,18 @@ groundtruth failure-inspect reports/forensics/osha/forensics.json --query q019
 
 The JSON and Markdown reports contain relevant chunk IDs, ranks, scores, and classifications, but no source passages or query text. They stay local under `reports/forensics/`. Unknown ranks or pool membership mean the saved run depth cannot establish them.
 
+## Retrieval Experiments
+
+Define numeric candidate overrides in [the OSHA experiment spec](experiments/osha/retrieval-v1.yaml), validate them without model loading, then run them against the fixed corpus and golden dataset:
+
+```bash
+groundtruth experiment-run experiments/osha/retrieval-v1.yaml --output reports/experiments/osha/retrieval-v1 --dry-run
+groundtruth experiment-run experiments/osha/retrieval-v1.yaml --output reports/experiments/osha/retrieval-v1
+groundtruth experiment-inspect reports/experiments/osha/retrieval-v1/experiment.json --candidate hybrid-depth-30
+```
+
+The experiment compares each candidate with the matching v1 retriever, records query diagnostics, and reports Pareto and advisory promotion status. Four-stage forensics is marked unavailable when a candidate has only its own stage run. No command promotes a config, edits baselines or labels, or commits reports. See [experiment guidance](docs/EXPERIMENTS.md).
+
 ## Continuous Integration
 
 Pull requests and pushes to `main` run tests, Ruff, `compileall`, CLI smoke checks, `groundtruth benchmark-verify osha`, and a synthetic regression gate. The normal CI workflow uses `.[dev]`; it does **not** download the OSHA PDF or model weights. The synthetic PASS/WARN/FAIL fixtures exercise the regression engine, not real retrieval quality.

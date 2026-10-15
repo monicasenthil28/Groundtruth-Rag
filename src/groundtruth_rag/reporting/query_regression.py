@@ -173,7 +173,7 @@ def compare_queries(query_base: QueryBaseline, aggregate: Baseline,
         if old is None or name not in aggregate.runs or old.run_id != aggregate.runs[name].run_id:
             raise ValueError(f"INCOMPATIBLE BENCHMARKS: query baseline missing {name}")
         run = _load_run(candidate_path, summary, name)
-        if old.retriever_type != name or run.configuration_name != old.configuration_name:
+        if old.retriever_type != name:
             raise ValueError(f"INCOMPATIBLE BENCHMARKS: retriever identity differs for {name}")
         old_rows = {row.query_id: row for row in old.queries}
         new_rows = {row.query_id: row for row in run.per_query_results}

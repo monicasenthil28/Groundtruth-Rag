@@ -41,6 +41,12 @@ Benchmark -> Regression -> Changed Queries -> Failure Forensics -> Stage-Level D
 
 ## Responsibilities
 
+```text
+Retrieval Change -> Experiment Candidates -> Fixed Benchmark -> Regression
+                      -> Query Diagnostics -> Failure Forensics when stage runs exist
+                      -> Pareto / Policy Review -> PROMOTE_CANDIDATE / REVIEW / REJECT
+```
+
 - **Ingestion (implemented):** PDF, UTF-8 text, and Markdown loaders preserve document source and PDF page numbers. Deterministic word chunking produces stable IDs and position metadata; versioned corpus JSONL stores the resulting chunks.
 - **Retrieval (implemented):** Dense, BM25, Hybrid RRF, and Hybrid + CrossEncoder implement `Retriever.index(chunks)` and `retrieve(query, k)`. Dense uses in-memory normalized vectors and an ignored local embedding cache. All pipelines return the same `RetrievalHit` contract; the evaluation runner has no retriever-specific path.
 - **Human labeling (tooling implemented):** Separate draft questions carry no relevance IDs. A resumable terminal review shows Dense, BM25, and Hybrid candidates plus corpus search. Explicit human confirmation writes strict golden `EvalQuery` records. Audit checks progress, provenance, coverage, and fixed-corpus compatibility. Local OSHA labels have 29 verified queries and one reviewed skip.

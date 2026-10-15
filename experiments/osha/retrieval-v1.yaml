@@ -1,0 +1,29 @@
+schema_version: "1.0"
+experiment_id: osha-retrieval-v1
+benchmark:
+  id: osha
+  spec: benchmarks/osha/benchmark.yaml
+  corpus: datasets/osha/corpus.jsonl
+  manifest: datasets/osha/corpus_manifest.json
+  dataset: benchmarks/osha/eval.jsonl
+  baseline: baselines/osha/v1.json
+  query_baseline: baselines/osha/v1.query.json
+  regression_policy: configs/regression/osha.yaml
+pareto:
+  quality_metrics: [recall@3, mrr, ndcg@3]
+  include_latency: false
+promotion:
+  review_on_new_critical: true
+candidates:
+  - id: hybrid-depth-10
+    base_config: configs/hybrid.yaml
+    overrides: {dense_candidates: 10, bm25_candidates: 10}
+  - id: hybrid-depth-30
+    base_config: configs/hybrid.yaml
+    overrides: {dense_candidates: 30, bm25_candidates: 30}
+  - id: rerank-pool-10
+    base_config: configs/hybrid_rerank.yaml
+    overrides: {candidate_pool: 10}
+  - id: rerank-pool-30
+    base_config: configs/hybrid_rerank.yaml
+    overrides: {candidate_pool: 30}
